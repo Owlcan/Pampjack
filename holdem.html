@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lulu's Fantasy Blackjack</title>
+    <title>Lulu's Fantasy Hold'em</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap" rel="stylesheet">
@@ -17,7 +17,6 @@
             --gold-light: #ffd700;
             --text-color: #fce8b2;
             --board-max-width: 95vw;
-            /* Allows the table to stretch wide */
             --base-scale: 1;
         }
 
@@ -136,7 +135,6 @@
             border-radius: 10px;
             min-width: 300px;
             flex: 1 1 300px;
-            /* Allows boxes to stretch horizontally */
             transition: box-shadow 0.3s ease;
         }
 
@@ -157,32 +155,37 @@
             display: flex;
             flex-direction: row;
             justify-content: center;
-            /* Allow vertical room for much larger cards */
             min-height: calc(200px * var(--base-scale));
             margin-top: 10px;
         }
 
         .card {
-            /* Massively increased upper bounds so cards get MUCH larger */
             width: calc(clamp(100px, 16vw, 240px) * var(--base-scale));
             aspect-ratio: 386 / 746;
             background-color: transparent;
             border-radius: 8px;
             box-shadow: 4px 6px 12px rgba(0, 0, 0, 0.6);
             position: relative;
-            /* Changed to adaptive percentage to pull cards further apart */
             margin-left: calc(-2vw * var(--base-scale));
             transition: transform 0.2s;
         }
 
         .card:first-child {
             margin-left: 0;
-            /* Keeps the hand centered perfectly */
         }
 
         .card:hover {
             transform: translateY(-10px);
             z-index: 100 !important;
+        }
+
+        #community-cards .card {
+            margin-left: 0;
+            margin-right: 5px;
+        }
+
+        #community-cards .card:last-child {
+            margin-right: 0;
         }
 
         .card-sprite {
@@ -237,7 +240,6 @@
             height: 72px;
             width: auto;
             object-fit: contain;
-            /* Prevents coin stretching */
             filter: drop-shadow(2px 4px 4px rgba(0, 0, 0, 0.6));
         }
 
@@ -474,11 +476,18 @@
         <div class="area hidden" id="player-bets-area"></div>
         <div class="dealer-center-column">
             <div class="dealer-banner">
-                <img id="dealer-avatar" src="deck of cards game/kiki_neutral.webp" alt="Dealer Kiki">
+                <img id="dealer-avatar" src="deck of cards game/elva_neutral.webp" alt="Dealer Elva">
             </div>
+            
+            <!-- Community Cards Container -->
+            <div id="community-area" class="area hidden" style="margin-top: 15px; width: 100%; max-width: 600px; box-sizing: border-box;">
+                <div class="status-text" style="font-size: 1.2rem;">Community Cards</div>
+                <div class="cards-container" id="community-cards"></div>
+            </div>
+
             <div id="play-controls">
-                <button id="btn-hit" onclick="playerAction('hit')" class="hidden">Hit</button>
-                <button id="btn-stand" onclick="playerAction('stand')" class="hidden">Stand</button>
+                <button id="btn-fold" onclick="playerHoldemAction('fold')" class="hidden">Fold</button>
+                <button id="btn-call" onclick="playerHoldemAction('call')" class="hidden">Call</button>
             </div>
         </div>
         <div class="area hidden" id="dealer-area">
@@ -491,10 +500,10 @@
         <!-- Setup Screen -->
         <div id="setup-screen">
             <div class="game-picker-container">
-                <div class="game-card active-game" onclick="switchGamePage('blackjack')">
+                <div class="game-card" onclick="switchGamePage('blackjack')">
                     <img src="deck of cards game/blackjackattract.webp" alt="Blackjack (Dealer: Kiki)" style="width: 100%; display: block;">
                 </div>
-                <div class="game-card" onclick="switchGamePage('holdem')">
+                <div class="game-card active-game" onclick="switchGamePage('holdem')">
                     <img src="deck of cards game/holdemattract.webp" alt="Texas Hold'em (Dealer: Elva)" style="width: 100%; display: block;">
                 </div>
             </div>
@@ -511,8 +520,8 @@
                 <div class="setup-group">
                     <h2>Betting Rules</h2>
                     <select id="betting-mode">
-                        <option value="low">Low Roller (1:1 Payout, 1.5:1 Blackjack)</option>
-                        <option value="high">High Roller (2:1 Payout, 3:1 Blackjack)</option>
+                        <option value="low">Low Roller ($10 Ante, 1:1 Call Payout)</option>
+                        <option value="high">High Roller ($50 Ante, 1:1 Call Payout)</option>
                     </select>
                 </div>
             </div>
@@ -606,8 +615,6 @@
                 <button id="btn-bet-up" onclick="adjustBet(5)" class="hidden">+ Bet</button>
                 <button id="btn-confirm-bet" onclick="confirmBet()" class="hidden">Lock Bet</button>
 
-                <!-- Playing Controls moved under dealer image -->
-
                 <!-- Reset Control -->
                 <button id="btn-next-round" onclick="startNextRound()" class="hidden">Next Round</button>
                 <button id="btn-reset" onclick="fullResetGame()" class="hidden">Cash Out & Quit</button>
@@ -616,8 +623,7 @@
     </div>
 
     <script>
-        // FULLY RESTORED ADJUSTMENTS BLOCK
-        // Pampires, Dragons, and Caelistians are mathematically plotted according to the absolute bounding boxes provided.
+        // Adjustments block copied from index.html to ensure card rendering alignment remains perfect
         window.devAdjustments = {
             "0_0": { "x": 1.3, "y": 0 },
             "0_1": { "x": 0.8, "y": 0 },
@@ -695,14 +701,15 @@
         let deck = [];
         let players = [];
         let dealer = { hand: [], hiddenCard: true, status: 'playing' };
+        let communityCards = [];
         let currentPlayerIndex = 0;
         let gameState = 'setup';
         let delayTimer = null;
         let currentBettingMode = 'low';
 
         function switchGamePage(game) {
-            if (game === 'holdem') {
-                window.location.href = 'holdem.html';
+            if (game === 'blackjack') {
+                window.location.href = 'index.html';
             }
         }
 
@@ -716,31 +723,164 @@
             deck = [];
             for (let s = 0; s < suits.length; s++) {
                 for (let v = 0; v < values.length; v++) {
-                    if (values[v].val === 14) continue;
+                    if (values[v].val === 14) continue; // Exclude Jesters (val 14)
                     deck.push({
                         suitIndex: s, valueIndex: v,
                         valObj: values[v], suitObj: suits[s]
                     });
                 }
             }
+            // Shuffle
             for (let i = deck.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [deck[i], deck[j]] = [deck[j], deck[i]];
             }
         }
 
-        function getHandInfo(hand) {
-            let total = 0; let aces = 0;
-            for (let card of hand) {
-                let v = card.valObj.val;
-                if (v === 1) { aces++; total += 11; }
-                else if (v >= 10) { total += 10; }
-                else { total += v; }
+        // --- Poker Hand Evaluation Engine ---
+        function evaluate5CardHand(cards) {
+            const getCardValue = c => c.valObj.val === 1 ? 14 : c.valObj.val;
+            
+            const sorted = [...cards].sort((a, b) => getCardValue(b) - getCardValue(a));
+            const vals = sorted.map(getCardValue);
+            const suits = sorted.map(c => c.suitIndex);
+            
+            const isFlush = suits.every(s => s === suits[0]);
+            
+            let isStraight = false;
+            let straightHigh = 0;
+            
+            // Check normal straight
+            if (vals[0] - vals[4] === 4 && new Set(vals).size === 5) {
+                isStraight = true;
+                straightHigh = vals[0];
+            } 
+            // Check Ace-low straight (5-4-3-2-A)
+            else if (vals[0] === 14 && vals[1] === 5 && vals[2] === 4 && vals[3] === 3 && vals[4] === 2) {
+                isStraight = true;
+                straightHigh = 5;
             }
-            while (total > 21 && aces > 0) { total -= 10; aces--; }
-            return { total: total, isSoft: (aces > 0), isSoft17: (total === 17 && aces > 0) };
+            
+            const counts = {};
+            vals.forEach(v => counts[v] = (counts[v] || 0) + 1);
+            const freq = Object.entries(counts)
+                .map(([val, count]) => ({ val: parseInt(val), count }))
+                .sort((a, b) => b.count - a.count || b.val - a.val);
+            
+            if (isFlush && isStraight) {
+                if (straightHigh === 14) return { score: 9, ranks: [14], label: "Royal Flush" };
+                return { score: 8, ranks: [straightHigh], label: "Straight Flush" };
+            }
+            
+            if (freq[0].count === 4) {
+                return { score: 7, ranks: [freq[0].val, freq[1].val], label: "Four of a Kind" };
+            }
+            
+            if (freq[0].count === 3 && freq[1].count === 2) {
+                return { score: 6, ranks: [freq[0].val, freq[1].val], label: "Full House" };
+            }
+            
+            if (isFlush) {
+                return { score: 5, ranks: vals, label: "Flush" };
+            }
+            
+            if (isStraight) {
+                return { score: 4, ranks: [straightHigh], label: "Straight" };
+            }
+            
+            if (freq[0].count === 3) {
+                return { score: 3, ranks: [freq[0].val, freq[1].val, freq[2].val], label: "Three of a Kind" };
+            }
+            
+            if (freq[0].count === 2 && freq[1].count === 2) {
+                return { score: 2, ranks: [freq[0].val, freq[1].val, freq[2].val], label: "Two Pair" };
+            }
+            
+            if (freq[0].count === 2) {
+                return { score: 1, ranks: [freq[0].val, ...freq.slice(1).map(f => f.val)], label: "Pair" };
+            }
+            
+            return { score: 0, ranks: vals, label: "High Card" };
         }
 
+        // Evaluates a set of 5, 6, or 7 cards and returns the best 5-card combination
+        function getBestHandFromSet(cards) {
+            if (cards.length < 5) return { score: -1, ranks: [], label: "Incomplete" };
+            
+            if (cards.length === 5) {
+                const res = evaluate5CardHand(cards);
+                res.cards = cards;
+                return res;
+            }
+            
+            if (cards.length === 6) {
+                let bestHand = null;
+                for (let i = 0; i < 6; i++) {
+                    const fiveCards = cards.filter((_, idx) => idx !== i);
+                    const evalResult = evaluate5CardHand(fiveCards);
+                    if (!bestHand || compareHands(evalResult, bestHand) > 0) {
+                        bestHand = evalResult;
+                        bestHand.cards = fiveCards;
+                    }
+                }
+                return bestHand;
+            }
+            
+            // 7 cards
+            let bestHand = null;
+            for (let i = 0; i < 7; i++) {
+                for (let j = i + 1; j < 7; j++) {
+                    const fiveCards = [];
+                    for (let k = 0; k < 7; k++) {
+                        if (k !== i && k !== j) {
+                            fiveCards.push(cards[k]);
+                        }
+                    }
+                    const evalResult = evaluate5CardHand(fiveCards);
+                    if (!bestHand || compareHands(evalResult, bestHand) > 0) {
+                        bestHand = evalResult;
+                        bestHand.cards = fiveCards;
+                    }
+                }
+            }
+            return bestHand;
+        }
+
+        // Compares two evaluated hands
+        function compareHands(handA, handB) {
+            if (handA.score !== handB.score) {
+                return handA.score - handB.score;
+            }
+            for (let i = 0; i < handA.ranks.length; i++) {
+                if (handA.ranks[i] !== handB.ranks[i]) {
+                    return handA.ranks[i] - handB.ranks[i];
+                }
+            }
+            return 0;
+        }
+
+        // Dealer qualification rule: Pair of 4s or better
+        function dealerQualifies(dealerHandResult) {
+            if (dealerHandResult.score > 1) return true;
+            if (dealerHandResult.score === 1) {
+                return dealerHandResult.ranks[0] >= 4;
+            }
+            return false;
+        }
+
+        // Ante Payout Multipliers
+        function getAntePayoutRate(score) {
+            switch (score) {
+                case 9: return 100; // Royal Flush
+                case 8: return 20;  // Straight Flush
+                case 7: return 10;  // Four of a Kind
+                case 6: return 3;   // Full House
+                case 5: return 2;   // Flush
+                default: return 1;  // Straight or lower
+            }
+        }
+
+        // --- Game Flow Methods ---
         function startGame() {
             currentBettingMode = document.getElementById('betting-mode').value;
             const startCash = currentBettingMode === 'high' ? 1000 : 200;
@@ -752,7 +892,7 @@
                 players.push({
                     id: i, name: `Player ${i} (${type.toUpperCase()})`,
                     type: type, hand: [], status: 'betting',
-                    bankroll: startCash, currentBet: 0
+                    bankroll: startCash, currentBet: 0, callBet: 0
                 });
             }
 
@@ -767,11 +907,13 @@
             clearTimeout(delayTimer);
             buildDeck();
             dealer = { hand: [], hiddenCard: true, status: 'playing' };
+            communityCards = [];
             setDealerExpression('neutral');
 
             for (let p of players) {
                 p.hand = [];
                 p.status = 'betting';
+                p.callBet = 0;
                 p.currentBet = currentBettingMode === 'high' ? 50 : 10;
                 if (p.currentBet > p.bankroll) p.currentBet = p.bankroll;
             }
@@ -785,7 +927,7 @@
 
         function processBettingTurn() {
             if (currentPlayerIndex >= players.length) {
-                executeDeal();
+                executeHoldemDeal();
                 return;
             }
 
@@ -799,7 +941,7 @@
 
             hideAllControls();
             if (p.type === 'human') {
-                showMessage(`${p.name}, place your bet.`);
+                showMessage(`${p.name}, place your Ante bet.`);
                 document.getElementById('btn-bet-down').classList.remove('hidden');
                 document.getElementById('btn-bet-up').classList.remove('hidden');
                 document.getElementById('btn-confirm-bet').classList.remove('hidden');
@@ -828,181 +970,237 @@
             processBettingTurn();
         }
 
-        function executeDeal() {
+        function executeHoldemDeal() {
             gameState = 'playing';
+            communityCards = [];
+            
+            // Deal 2 hole cards to players
             for (let j = 0; j < 2; j++) {
                 for (let p of players) {
-                    if (p.status !== 'broke') p.hand.push(deck.pop());
+                    if (p.status !== 'broke') {
+                        p.hand.push(deck.pop());
+                    }
                 }
+            }
+            // Deal 2 hole cards to dealer
+            for (let j = 0; j < 2; j++) {
                 dealer.hand.push(deck.pop());
             }
+            // Deal Flop (3 community cards)
+            for (let j = 0; j < 3; j++) {
+                communityCards.push(deck.pop());
+            }
+            
             currentPlayerIndex = 0;
-            findNextActivePlayer();
+            findNextHoldemDecisionPlayer();
         }
 
-        function findNextActivePlayer() {
-            while (currentPlayerIndex < players.length && players[currentPlayerIndex].status === 'broke') {
+        function findNextHoldemDecisionPlayer() {
+            while (currentPlayerIndex < players.length && players[currentPlayerIndex].status !== 'playing') {
                 currentPlayerIndex++;
             }
+            
             if (currentPlayerIndex >= players.length) {
-                gameState = 'dealerTurn';
-                dealerTurn();
+                const callingPlayers = players.filter(p => p.status === 'call');
+                if (callingPlayers.length === 0) {
+                    resolveHoldemGame();
+                } else {
+                    gameState = 'dealerTurn';
+                    revealHoldemCommunity();
+                }
             } else {
-                processCurrentTurn();
+                processCurrentHoldemTurn();
             }
         }
 
-        function processCurrentTurn() {
+        function processCurrentHoldemTurn() {
             let p = players[currentPlayerIndex];
-            let info = getHandInfo(p.hand);
-
-            if (p.hand.length === 2 && info.total === 21) {
-                p.status = 'stand';
-                showMessage(`${p.name} got Blackjack!`);
-                if (p === getPrimaryPlayer()) {
-                    setDealerExpression('blackjack');
+            hideAllControls();
+            
+            if (p.type === 'human') {
+                showMessage(`${p.name}, Fold or Call?`);
+                document.getElementById('btn-fold').classList.remove('hidden');
+                
+                const btnCall = document.getElementById('btn-call');
+                btnCall.classList.remove('hidden');
+                
+                const callCost = p.currentBet * 2;
+                if (p.bankroll < callCost) {
+                    btnCall.disabled = true;
+                    btnCall.title = "Not enough chips to call (requires 2x Ante)";
+                } else {
+                    btnCall.disabled = false;
+                    btnCall.title = "";
                 }
+            } else {
+                showMessage(`${p.name} is deciding...`);
+                delayTimer = setTimeout(() => {
+                    executeAIHoldemTurn(p);
+                }, 1200);
+            }
+            updateUI();
+        }
+
+        function playerHoldemAction(action) {
+            let p = players[currentPlayerIndex];
+            if (action === 'fold') {
+                p.status = 'folded';
+                showMessage(`${p.name} folded.`);
+                updateUI();
                 delayTimer = setTimeout(() => {
                     currentPlayerIndex++;
-                    findNextActivePlayer();
-                }, 1500);
+                    findNextHoldemDecisionPlayer();
+                }, 1200);
+            } else if (action === 'call') {
+                const callCost = p.currentBet * 2;
+                p.bankroll -= callCost;
+                p.callBet = callCost;
+                p.status = 'call';
+                showMessage(`${p.name} calls.`);
                 updateUI();
-                return;
-            }
-
-            hideAllControls();
-            if (p.type === 'human') {
-                showMessage('');
-                document.getElementById('btn-hit').classList.remove('hidden');
-                document.getElementById('btn-stand').classList.remove('hidden');
-            } else {
-                showMessage('');
-                delayTimer = setTimeout(() => { executeAITurn(p); }, 1200);
-            }
-            updateUI();
-        }
-
-        function playerAction(action) {
-            let p = players[currentPlayerIndex];
-            if (action === 'hit') {
-                p.hand.push(deck.pop());
-                let info = getHandInfo(p.hand);
-                if (info.total > 21) {
-                    p.status = 'bust';
-                    showMessage(`${p.name} Busts!`);
-                    if (p === getPrimaryPlayer()) {
-                        setDealerExpression('bust');
-                    }
-                    updateUI();
-                    delayTimer = setTimeout(() => { currentPlayerIndex++; findNextActivePlayer(); }, 1500);
-                } else if (info.total === 21) {
-                    p.status = 'stand';
-                    updateUI();
-                    delayTimer = setTimeout(() => { currentPlayerIndex++; findNextActivePlayer(); }, 1000);
-                } else { updateUI(); }
-            } else {
-                p.status = 'stand';
-                updateUI();
-                currentPlayerIndex++;
-                findNextActivePlayer();
-            }
-        }
-
-        function executeAITurn(p) {
-            let info = getHandInfo(p.hand);
-            if (info.total > 21) {
-                p.status = 'bust';
-                if (p === getPrimaryPlayer()) {
-                    setDealerExpression('bust');
-                }
-                updateUI();
-                delayTimer = setTimeout(() => { currentPlayerIndex++; findNextActivePlayer(); }, 1500);
-                return;
-            }
-
-            let shouldHit = false;
-            if (info.isSoft17) {
-                shouldHit = Math.random() < 0.5;
-            } else if (info.total < 17) {
-                shouldHit = true;
-            }
-
-            if (shouldHit) {
                 delayTimer = setTimeout(() => {
-                    p.hand.push(deck.pop());
-                    updateUI();
-                    executeAITurn(p);
-                }, 1000);
+                    currentPlayerIndex++;
+                    findNextHoldemDecisionPlayer();
+                }, 1200);
+            }
+        }
+
+        function executeAIHoldemTurn(p) {
+            const cardsForEval = [...p.hand, ...communityCards]; // 2 hole + 3 community cards (Flop)
+            const handResult = getBestHandFromSet(cardsForEval);
+            
+            // Count suits for flush draw
+            const suitCounts = {};
+            cardsForEval.forEach(c => suitCounts[c.suitIndex] = (suitCounts[c.suitIndex] || 0) + 1);
+            const isFlushDraw = Object.values(suitCounts).some(count => count === 4);
+            
+            // Check for straight draw
+            const vals = [...new Set(cardsForEval.map(c => c.valObj.val === 1 ? 14 : c.valObj.val))].sort((a, b) => a - b);
+            let isStraightDraw = false;
+            for (let i = 0; i <= vals.length - 4; i++) {
+                if (vals[i+3] - vals[i] <= 4) isStraightDraw = true;
+            }
+            if (vals.includes(14)) {
+                const lowVals = vals.map(v => v === 14 ? 1 : v).sort((a, b) => a - b);
+                for (let i = 0; i <= lowVals.length - 4; i++) {
+                    if (lowVals[i+3] - lowVals[i] <= 4) isStraightDraw = true;
+                }
+            }
+            
+            let shouldCall = false;
+            if (handResult.score >= 1) {
+                // Pair or better
+                shouldCall = Math.random() < 0.95;
+            } else if (isFlushDraw || isStraightDraw) {
+                shouldCall = Math.random() < 0.75;
             } else {
-                p.status = 'stand';
-                updateUI();
-                delayTimer = setTimeout(() => { currentPlayerIndex++; findNextActivePlayer(); }, 1200);
+                // Check if they hold Ace or King in hole cards
+                const hasHighHole = p.hand.some(c => c.valObj.val === 1 || c.valObj.val >= 13);
+                if (hasHighHole) {
+                    shouldCall = Math.random() < 0.50;
+                } else {
+                    shouldCall = Math.random() < 0.15;
+                }
             }
-        }
-
-        function dealerTurn() {
-            dealer.hiddenCard = false;
-            hideAllControls();
+            
+            const callCost = p.currentBet * 2;
+            if (shouldCall && p.bankroll >= callCost) {
+                p.bankroll -= callCost;
+                p.callBet = callCost;
+                p.status = 'call';
+                showMessage(`${p.name} calls.`);
+            } else {
+                p.status = 'folded';
+                showMessage(`${p.name} folds.`);
+            }
+            
             updateUI();
-            const dealerLoop = () => {
-                let curInfo = getHandInfo(dealer.hand);
-                if (curInfo.total > 21) {
-                    dealer.status = 'bust';
-                    showMessage(`Dealer Busts!`);
-                    delayTimer = setTimeout(resolveGame, 1500);
-                } else if (curInfo.total < 17) {
-                    delayTimer = setTimeout(() => {
-                        dealer.hand.push(deck.pop());
-                        updateUI();
-                        dealerLoop();
-                    }, 1200);
-                } else {
-                    dealer.status = 'stand';
-                    delayTimer = setTimeout(resolveGame, 1500);
-                }
-            };
-            delayTimer = setTimeout(dealerLoop, 1500);
+            delayTimer = setTimeout(() => {
+                currentPlayerIndex++;
+                findNextHoldemDecisionPlayer();
+            }, 1200);
         }
 
-        function resolveGame() {
+        function revealHoldemCommunity() {
+            showMessage("Dealing the Turn...");
+            delayTimer = setTimeout(() => {
+                communityCards.push(deck.pop());
+                setDealerExpression('draw');
+                updateUI();
+                
+                delayTimer = setTimeout(() => {
+                    showMessage("Dealing the River...");
+                    communityCards.push(deck.pop());
+                    setDealerExpression('draw');
+                    updateUI();
+                    
+                    delayTimer = setTimeout(() => {
+                        showMessage("Showdown! Dealer reveals cards.");
+                        dealer.hiddenCard = false;
+                        setDealerExpression('neutral');
+                        updateUI();
+                        
+                        delayTimer = setTimeout(() => {
+                            resolveHoldemGame();
+                        }, 1500);
+                    }, 1500);
+                }, 1500);
+            }, 1500);
+        }
+
+        function resolveHoldemGame() {
             gameState = 'gameOver';
-            let dTotal = getHandInfo(dealer.hand).total;
-
-            let payoutNormal = currentBettingMode === 'high' ? 2 : 1;
-            let payoutBJ = currentBettingMode === 'high' ? 3 : 1.5;
-
+            
+            const callingPlayers = players.filter(p => p.status === 'call');
+            if (callingPlayers.length === 0) {
+                showMessage("All players folded. Dealer wins!");
+                setDealerExpression('neutral');
+                hideAllControls();
+                document.getElementById('btn-next-round').classList.remove('hidden');
+                document.getElementById('btn-reset').classList.remove('hidden');
+                updateUI();
+                return;
+            }
+            
+            const dHandResult = getBestHandFromSet([...dealer.hand, ...communityCards]);
+            const dQualifies = dealerQualifies(dHandResult);
+            
             for (let p of players) {
-                if (p.status === 'broke') continue;
-                let pTotal = getHandInfo(p.hand).total;
-                let isBJ = (p.hand.length === 2 && pTotal === 21);
-                let dIsBJ = (dealer.hand.length === 2 && dTotal === 21);
-
-                if (p.status === 'bust') {
-                    p.status = 'lose';
-                } else if (isBJ && !dIsBJ) {
+                if (p.status === 'broke' || p.status === 'folded') continue;
+                
+                const pHandResult = getBestHandFromSet([...p.hand, ...communityCards]);
+                const comp = compareHands(pHandResult, dHandResult);
+                const ante = p.currentBet;
+                const callCost = p.callBet;
+                const payoutRate = getAntePayoutRate(pHandResult.score);
+                
+                if (!dQualifies) {
                     p.status = 'win';
-                    p.bankroll += p.currentBet + (p.currentBet * payoutBJ);
-                } else if (dealer.status === 'bust' || pTotal > dTotal) {
-                    p.status = 'win';
-                    p.bankroll += p.currentBet + (p.currentBet * payoutNormal);
-                } else if (pTotal < dTotal) {
-                    p.status = 'lose';
+                    p.bankroll += ante + (ante * payoutRate) + callCost;
                 } else {
-                    p.status = 'push';
-                    p.bankroll += p.currentBet;
+                    if (comp > 0) {
+                        p.status = 'win';
+                        p.bankroll += ante + (ante * payoutRate) + callCost + callCost;
+                    } else if (comp < 0) {
+                        p.status = 'lose';
+                    } else {
+                        p.status = 'push';
+                        p.bankroll += ante + callCost;
+                    }
                 }
             }
-
+            
             showMessage("Round Complete!");
             hideAllControls();
             document.getElementById('btn-next-round').classList.remove('hidden');
             document.getElementById('btn-reset').classList.remove('hidden');
+            
             updateDealerExpressionForOutcome();
             updateUI();
         }
 
         function hideAllControls() {
-            const btns = ['btn-bet-down', 'btn-bet-up', 'btn-confirm-bet', 'btn-hit', 'btn-stand', 'btn-next-round', 'btn-reset'];
+            const btns = ['btn-bet-down', 'btn-bet-up', 'btn-confirm-bet', 'btn-fold', 'btn-call', 'btn-next-round', 'btn-reset'];
             btns.forEach(id => document.getElementById(id).classList.add('hidden'));
         }
 
@@ -1033,7 +1231,7 @@
             let hoverStyle = zIndex === 'dev' ? 'transform: none; margin-left: 0;' : '';
 
             return `
-            <div class="${zIndex === 'dev' ? 'card' : 'card'}" style="z-index: ${zIndex === 'dev' ? 1 : zIndex}; ${hoverStyle}">
+            <div class="card" style="z-index: ${zIndex === 'dev' ? 1 : zIndex}; ${hoverStyle}">
                 <div class="card-fallback">${cardObj.valObj.short} ${cardObj.suitObj.short}</div>
                 <div class="card-sprite" style="${styleStr}"></div>
             </div>
@@ -1069,25 +1267,47 @@
             let dealerArea = document.getElementById('dealer-cards');
             dealerArea.innerHTML = '';
             for (let i = 0; i < dealer.hand.length; i++) {
-                dealerArea.innerHTML += createCardHTML(dealer.hand[i], (i === 1 && dealer.hiddenCard), i);
+                dealerArea.innerHTML += createCardHTML(dealer.hand[i], (dealer.hiddenCard), i);
             }
 
             let dealerScoreSpan = document.getElementById('dealer-score');
-            if (dealer.hiddenCard && dealer.hand.length > 0) dealerScoreSpan.innerText = `(Visible: ${getHandInfo([dealer.hand[0]]).total})`;
-            else if (dealer.hand.length > 0) dealerScoreSpan.innerText = `(Total: ${getHandInfo(dealer.hand).total})`;
-            else dealerScoreSpan.innerText = '';
+            if (dealer.hiddenCard && dealer.hand.length > 0) {
+                dealerScoreSpan.innerText = `(Cards: Facedown)`;
+            } else if (dealer.hand.length > 0) {
+                const dHandResult = getBestHandFromSet([...dealer.hand, ...communityCards]);
+                const qualified = dealerQualifies(dHandResult);
+                dealerScoreSpan.innerText = `(Hand: ${dHandResult.label}${qualified ? '' : ' - Doesn\'t Qualify'})`;
+            } else {
+                dealerScoreSpan.innerText = '';
+            }
 
-            // Render player bets on the left of the dealer
+            // Render community cards
+            let communityArea = document.getElementById('community-area');
+            let communityCardsContainer = document.getElementById('community-cards');
+            if (gameState !== 'setup') {
+                communityArea.classList.remove('hidden');
+                communityCardsContainer.innerHTML = '';
+                for (let i = 0; i < communityCards.length; i++) {
+                    communityCardsContainer.innerHTML += createCardHTML(communityCards[i], false, i);
+                }
+            } else {
+                communityArea.classList.add('hidden');
+            }
+
+            // Render player bets
             let betsArea = document.getElementById('player-bets-area');
             betsArea.innerHTML = '';
             for (let i = 0; i < players.length; i++) {
                 let p = players[i];
                 if (p.status === 'broke') continue;
+                
+                const totalBetOnTable = p.currentBet + (p.callBet || 0);
+                const betText = p.callBet ? `$${p.currentBet} (Ante) + $${p.callBet} (Call)` : `$${p.currentBet} (Ante)`;
                 betsArea.innerHTML += `
                     <div class="player-bet-item">
                         <div style="font-size:1.1rem; color:var(--gold-light); font-weight:bold;">${p.name}</div>
-                        <div style="font-size:1.0rem; color:#fff; margin-bottom:5px;">Bank: $${p.bankroll} | Bet: $${p.currentBet}</div>
-                        ${renderCoins(p.currentBet)}
+                        <div style="font-size:1.0rem; color:#fff; margin-bottom:5px;">Bank: $${p.bankroll} | Bet: ${betText}</div>
+                        ${renderCoins(totalBetOnTable)}
                     </div>
                 `;
             }
@@ -1097,23 +1317,37 @@
 
             for (let i = 0; i < players.length; i++) {
                 let p = players[i];
-                let info = getHandInfo(p.hand);
                 let isActive = ((gameState === 'playing' || gameState === 'betting') && i === currentPlayerIndex);
 
                 let statusDisplay = '';
-                if (p.status === 'bust') statusDisplay = ' - BUST';
-                else if (p.status === 'win') statusDisplay = ' - WON!';
+                if (p.status === 'win') statusDisplay = ' - WON!';
                 else if (p.status === 'lose') statusDisplay = ' - LOST';
                 else if (p.status === 'push') statusDisplay = ' - PUSH';
-                else if (p.status === 'stand') statusDisplay = ' - STAND';
                 else if (p.status === 'broke') statusDisplay = ' - BROKE';
+                else if (p.status === 'folded') statusDisplay = ' - FOLDED';
+                else if (p.status === 'call') statusDisplay = ' - CALLED';
+
+                let scoreText = '';
+                if (p.status === 'folded') {
+                    scoreText = 'Folded';
+                } else if (p.hand.length > 0) {
+                    const cardsForEval = [...p.hand, ...communityCards];
+                    if (cardsForEval.length >= 5) {
+                        const pHandResult = getBestHandFromSet(cardsForEval);
+                        scoreText = `Hand: ${pHandResult.label}`;
+                    } else {
+                        scoreText = `Cards Dealt`;
+                    }
+                } else {
+                    scoreText = 'Hand: -';
+                }
 
                 let cardsHTML = p.hand.map((c, idx) => createCardHTML(c, false, idx)).join('');
 
                 playersArea.innerHTML += `
                 <div class="player-box ${isActive ? 'active-player' : ''}">
                     <div class="status-text">${p.name}</div>
-                    <div class="status-text" style="font-size:1.2rem;">Total: ${info.total} <span style="color:var(--gold-light)">${statusDisplay}</span></div>
+                    <div class="status-text" style="font-size:1.2rem;">${scoreText} <span style="color:var(--gold-light)">${statusDisplay}</span></div>
 
                     <div class="cards-container">
                         ${cardsHTML}
@@ -1203,23 +1437,23 @@
             const avatar = document.getElementById('dealer-avatar');
             if (!avatar) return;
 
-            let filename = 'kiki_neutral.webp';
+            let filename = 'elva_neutral.webp';
             switch (expression) {
-                case 'blackjack':
-                    filename = 'kiki_blackjack.webp';
+                case 'jackpot':
+                    filename = 'elva_jackpot.webp';
                     break;
-                case 'push':
-                    filename = 'kiki_push.webp';
+                case 'flush':
+                    filename = 'elva_flush.webp';
                     break;
-                case 'bust':
-                    filename = 'kiki_bust.webp';
+                case 'draw':
+                    filename = 'elva_draw.webp';
                     break;
-                case 'victory':
-                    filename = 'kiki_victory.webp';
+                case 'loss':
+                    filename = 'elva_loss.webp';
                     break;
                 case 'neutral':
                 default:
-                    filename = 'kiki_neutral.webp';
+                    filename = 'elva_neutral.webp';
                     break;
             }
 
@@ -1239,22 +1473,23 @@
             if (players.length === 0) return;
 
             const p = getPrimaryPlayer();
-            const pInfo = getHandInfo(p.hand);
-            const dInfo = getHandInfo(dealer.hand);
-
-            const pIsBJ = (p.hand.length === 2 && pInfo.total === 21);
-            const dIsBJ = (dealer.hand.length === 2 && dInfo.total === 21);
-
-            if (pInfo.total > 21) {
-                setDealerExpression('bust');
-            } else if (pIsBJ && !dIsBJ) {
-                setDealerExpression('blackjack');
-            } else if (p.status === 'win') {
-                setDealerExpression('victory');
-            } else if (p.status === 'push') {
-                setDealerExpression('push');
-            } else {
+            if (p.status === 'folded') {
                 setDealerExpression('neutral');
+            } else if (p.status === 'lose') {
+                // Dealer won the hand. Check if dealer won with a Flush or Jackpot hand to trigger Elva's custom win expressions
+                const dHandResult = getBestHandFromSet([...dealer.hand, ...communityCards]);
+                if (dHandResult.score >= 6) { // Full House or better
+                    setDealerExpression('jackpot');
+                } else if (dHandResult.score === 5) { // Flush
+                    setDealerExpression('flush');
+                } else {
+                    setDealerExpression('neutral');
+                }
+            } else if (p.status === 'push') {
+                setDealerExpression('draw');
+            } else if (p.status === 'win') {
+                // Player won, meaning the dealer (Elva) lost!
+                setDealerExpression('loss');
             }
         }
     </script>
