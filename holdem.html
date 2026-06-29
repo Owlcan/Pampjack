@@ -476,7 +476,7 @@
         <div class="area hidden" id="player-bets-area"></div>
         <div class="dealer-center-column">
             <div class="dealer-banner">
-                <img id="dealer-avatar" src="deck of cards game/elva_neutral.webp" alt="Dealer Elva">
+                <img id="dealer-avatar" src="deck of cards game/elvamainattract.webp" alt="Dealer Elva">
             </div>
             
             <!-- Community Cards Container -->
@@ -1209,6 +1209,7 @@
             document.getElementById('setup-screen').style.display = 'flex';
             document.getElementById('dealer-area').classList.add('hidden');
             document.getElementById('player-bets-area').classList.add('hidden');
+            document.getElementById('dealer-avatar').src = "deck of cards game/elvamainattract.webp";
         }
 
         function showMessage(msg) {

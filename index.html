@@ -474,7 +474,7 @@
         <div class="area hidden" id="player-bets-area"></div>
         <div class="dealer-center-column">
             <div class="dealer-banner">
-                <img id="dealer-avatar" src="deck of cards game/kiki_neutral.webp" alt="Dealer Kiki">
+                <img id="dealer-avatar" src="deck of cards game/kikimainattract.webp" alt="Dealer Kiki">
             </div>
             <div id="play-controls">
                 <button id="btn-hit" onclick="playerAction('hit')" class="hidden">Hit</button>
@@ -1011,6 +1011,7 @@
             document.getElementById('setup-screen').style.display = 'flex';
             document.getElementById('dealer-area').classList.add('hidden');
             document.getElementById('player-bets-area').classList.add('hidden');
+            document.getElementById('dealer-avatar').src = "deck of cards game/kikimainattract.webp";
         }
 
         function showMessage(msg) {
