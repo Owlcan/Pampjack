@@ -423,7 +423,7 @@
             flex-wrap: wrap;
             margin-bottom: 20px;
             width: 100%;
-            max-width: 950px;
+            max-width: 1300px;
         }
 
         .game-card {
@@ -505,6 +505,9 @@
                 </div>
                 <div class="game-card active-game" onclick="switchGamePage('holdem')">
                     <img src="deck of cards game/holdemattract.webp" alt="Texas Hold'em (Dealer: Elva)" style="width: 100%; display: block;">
+                </div>
+                <div class="game-card" onclick="switchGamePage('slots')">
+                    <img src="slots/slotmachinegallery.webp" alt="Slots" style="width: 100%; display: block;">
                 </div>
             </div>
 
@@ -710,6 +713,8 @@
         function switchGamePage(game) {
             if (game === 'blackjack') {
                 window.location.href = 'index.html';
+            } else if (game === 'slots') {
+                window.location.href = 'slots.html';
             }
         }
 

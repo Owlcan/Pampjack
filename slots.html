@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lulu's Fantasy Slots</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --wood-dark: #2a160b;
+            --wood-light: #4b2e1b;
+            --felt-green: #0b4a22;
+            --gold: #d4af37;
+            --gold-light: #ffd700;
+            --text-color: #fce8b2;
+            --board-max-width: 95vw;
+            --base-scale: 1;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'MedievalSharp', serif;
+            background: repeating-linear-gradient(45deg,
+                    var(--wood-dark),
+                    var(--wood-dark) 10px,
+                    var(--wood-light) 10px,
+                    var(--wood-light) 20px);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: var(--gold-light);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            margin-top: 15px;
+            margin-bottom: 15px;
+            font-size: 2.5rem;
+            text-align: center;
+        }
+
+        .container {
+            background-color: var(--felt-green);
+            border: 6px solid var(--gold);
+            border-radius: 20px;
+            box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            width: 95%;
+            max-width: var(--board-max-width);
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        /* --- Setup / Navigation Screen --- */
+        #setup-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px 0;
+            width: 100%;
+        }
+
+        .dropdowns-row {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 10px;
+        }
+
+        .setup-group {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--gold);
+            text-align: center;
+            flex: 1 1 250px;
+            box-sizing: border-box;
+        }
+
+        select,
+        button {
+            font-family: 'MedievalSharp', serif;
+            background-color: var(--wood-dark);
+            color: var(--gold-light);
+            border: 2px solid var(--gold);
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select {
+            margin: 0 10px;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--gold);
+            color: var(--wood-dark);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #777;
+            color: #777;
+        }
+
+        /* --- Game Selection Attract Cards --- */
+        .game-picker-container {
+            display: flex;
+            gap: 25px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 1300px;
+        }
+
+        .game-card {
+            cursor: pointer;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 4px solid transparent;
+            opacity: 0.6;
+            transition: all 0.3s ease;
+            width: clamp(280px, 30vw, 420px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+        }
+
+        .game-card:hover {
+            opacity: 0.95;
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.8);
+        }
+
+        .game-card.active-game {
+            border-color: var(--gold-light);
+            box-shadow: 0 0 25px var(--gold-light);
+            opacity: 1;
+        }
+
+        /* --- Gallery Map Layout --- */
+        .gallery-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            border: 6px solid var(--gold);
+            border-radius: 15px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        .gallery-img {
+            width: 100%;
+            display: block;
+            transition: filter 0.5s ease, transform 0.5s ease;
+        }
+
+        .gallery-wrapper.blurred .gallery-img {
+            filter: blur(10px) brightness(0.3);
+            transform: scale(1.02);
+        }
+
+        .gallery-overlay-button {
+            position: absolute;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0);
+            transition: background 0.25s, box-shadow 0.25s;
+        }
+
+        .gallery-overlay-button:hover {
+            background: rgba(255, 215, 0, 0.15);
+            box-shadow: inset 0 0 25px rgba(255, 215, 0, 0.4);
+        }
+
+        /* --- Active Cabinet Layout --- */
+        .cabinet-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .cabinet-outer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+        }
+
+        .cabinet-top-controls {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+            padding: 0 10px;
+        }
+
+        .cabinet-container {
+            position: relative;
+            height: 80vh;
+            aspect-ratio: 1792 / 2400;
+            max-height: 85vh;
+            background-color: var(--wood-dark);
+            border: 6px solid var(--gold);
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), inset 0 0 30px rgba(255, 215, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .cabinet-img {
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+            display: block;
+        }
+
+        /* --- Reels Positioning --- */
+        .reel {
+            position: absolute;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: transparent;
+        }
+
+        .reel-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.05s linear;
+        }
+
+        /* --- Cabinet Control Buttons --- */
+        .cabinet-control {
+            position: absolute;
+            cursor: pointer;
+            background: rgba(255, 0, 0, 0);
+            transition: background-color 0.2s, box-shadow 0.2s;
+            border-radius: 4px;
+        }
+
+        .cabinet-control:hover {
+            background: rgba(255, 215, 0, 0.12);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+        }
+
+        /* Add/Remove Bet button persistent glow when not spinning */
+        .cabinet-control.control-addbet.glow-active,
+        .cabinet-control.control-removebet.glow-active {
+            background-color: var(--machine-accent-rgba) !important;
+            border-radius: 15%;
+            box-shadow: 0 0 15px var(--machine-accent-glow) !important;
+        }
+
+        /* Lever hover-over glow with 15% border blur (rounded) */
+        .control-lever {
+            border-radius: 15%;
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+
+        .control-lever:hover {
+            background-color: var(--lever-hover-glow) !important;
+            box-shadow: 0 0 15px var(--lever-hover-glow) !important;
+        }
+
+        /* Audio controls header bar styles */
+        .audio-control-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--gold);
+            border-radius: 8px;
+            padding: 5px 15px;
+        }
+
+        .audio-label {
+            font-size: min(1.6vh, 0.95rem);
+            color: var(--gold-light);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-family: 'MedievalSharp', serif;
+        }
+
+        .audio-label input[type="checkbox"] {
+            cursor: pointer;
+            accent-color: var(--gold-light);
+        }
+
+        #volume-slider {
+            width: 80px;
+            cursor: pointer;
+            accent-color: var(--gold-light);
+            vertical-align: middle;
+        }
+
+        /* --- Transparent Display Overlays --- */
+        .cabinet-balance-overlay {
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: transparent;
+            font-family: monospace;
+            font-weight: bold;
+            color: #ff3333;
+            text-shadow: -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 0 8px #ff3333;
+            font-size: min(2.6vh, 5.2vw);
+            pointer-events: none;
+            box-sizing: border-box;
+        }
+
+        .cabinet-bet-win-overlay {
+            position: absolute;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: transparent;
+            pointer-events: none;
+            box-sizing: border-box;
+        }
+
+        .bet-value-box {
+            font-family: monospace;
+            font-weight: bold;
+            color: #ffcc00;
+            text-shadow: -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 0 8px #ffcc00;
+            font-size: min(2.6vh, 5.2vw);
+            width: 50%;
+            text-align: center;
+        }
+
+        .win-value-box {
+            font-family: monospace;
+            font-weight: bold;
+            color: #22ff22;
+            text-shadow: -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 0 8px #22ff22;
+            font-size: min(2.6vh, 5.2vw);
+            width: 50%;
+            text-align: center;
+        }
+
+        /* --- Payout Modal Overlay --- */
+        .payout-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .payout-modal-container {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            border: 6px solid var(--gold);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.9);
+        }
+
+        .payout-modal-img {
+            max-width: 100%;
+            max-height: 80vh;
+            display: block;
+        }
+
+        .payout-modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--wood-dark);
+            color: var(--gold-light);
+            border: 2px solid var(--gold);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            font-family: 'MedievalSharp', serif;
+        }
+
+        .payout-modal-close:hover {
+            background: var(--gold);
+            color: var(--wood-dark);
+        }
+
+        /* --- Broke Popup Overlay --- */
+        .broke-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            border-radius: 14px;
+        }
+
+        .broke-title {
+            color: #ff3333;
+            font-size: min(4vh, 8vw);
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #ff3333;
+            text-align: center;
+        }
+
+        /* Message board inside screen */
+        .cabinet-message-board {
+            position: absolute;
+            width: 100%;
+            bottom: 4%;
+            text-align: center;
+            font-size: min(1.8vh, 3.6vw);
+            color: var(--gold-light);
+            text-shadow: 2px 2px 4px #000;
+            pointer-events: none;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Lulu's Fantasy Casino</h1>
+
+    <div class="container">
+        <!-- Setup / Attraction Screen -->
+        <div id="setup-screen">
+            <div class="game-picker-container">
+                <div class="game-card" onclick="switchGamePage('blackjack')">
+                    <img src="deck of cards game/blackjackattract.webp" alt="Blackjack (Dealer: Kiki)" style="width: 100%; display: block;">
+                </div>
+                <div class="game-card" onclick="switchGamePage('holdem')">
+                    <img src="deck of cards game/holdemattract.webp" alt="Texas Hold'em (Dealer: Elva)" style="width: 100%; display: block;">
+                </div>
+                <div class="game-card active-game" onclick="switchGamePage('slots')">
+                    <img src="slots/slotmachinegallery.webp" alt="Slots" style="width: 100%; display: block;">
+                </div>
+            </div>
+
+            <div class="dropdowns-row">
+                <div class="setup-group">
+                    <h2>Betting Rules</h2>
+                    <select id="betting-mode" onchange="resetSessionBankroll()">
+                        <option value="low">Low Roller ($200 Start, $5 Min)</option>
+                        <option value="high">High Roller ($1000 Start, $50 Min)</option>
+                    </select>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 15px; margin-bottom: 5px; color: var(--gold-light);">Select a Slot Machine to Play</h2>
+
+            <div class="gallery-wrapper" id="gallery-wrapper">
+                <img class="gallery-img" src="slots/slotmachinegallery.webp" alt="Slot Machine Gallery">
+                <!-- Interactive areas (percentages derived from original size 2400x1792) -->
+                <div class="gallery-overlay-button" style="left: 3.75%; top: 17.63%; width: 23.04%; height: 69.36%;" onclick="selectMachine('pp')" title="Pretty Princess Slots"></div>
+                <div class="gallery-overlay-button" style="left: 26.92%; top: 17.86%; width: 23.58%; height: 69.36%;" onclick="selectMachine('dss')" title="Deluxe Super-Stal Slots"></div>
+                <div class="gallery-overlay-button" style="left: 51.00%; top: 17.86%; width: 24.42%; height: 69.59%;" onclick="selectMachine('bbb')" title="Big Bab Bounty Slots"></div>
+                <div class="gallery-overlay-button" style="left: 75.83%; top: 17.86%; width: 21.13%; height: 69.70%;" onclick="selectMachine('prince')" title="Padded Prince Slots"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Slot Machine Modal Overlay -->
+    <div class="cabinet-modal-overlay" id="cabinet-modal">
+        <div class="cabinet-outer">
+            <div class="cabinet-top-controls">
+                <button onclick="closeMachine()">← Return to Gallery</button>
+                <div class="audio-control-group">
+                    <label class="audio-label"><input type="checkbox" id="jingle-toggle" onchange="toggleJingle()" checked> 🎵 Music</label>
+                    <label class="audio-label">🔊 Vol: <input type="range" min="0" max="100" value="80" id="volume-slider" oninput="adjustVolume(this.value)"></label>
+                    <button id="mute-btn" onclick="toggleMute()">🔊 Sound On</button>
+                </div>
+            </div>
+
+            <div class="cabinet-container" id="cabinet-container">
+                <img class="cabinet-img" id="cabinet-background" src="" alt="Slot Machine Cabinet">
+                
+                <!-- Dynamic Reels Layer -->
+                <div id="reels-layer"></div>
+
+                <!-- Interactive Overlays -->
+                <div class="cabinet-control control-lever" id="lever-btn" onclick="pullLever()" title="Pull Lever"></div>
+                <div class="cabinet-control control-addbet" id="addbet-btn" onclick="adjustBetAction(1)" title="Increase Bet"></div>
+                <div class="cabinet-control control-removebet" id="removebet-btn" onclick="adjustBetAction(-1)" title="Decrease Bet"></div>
+                <div class="cabinet-control control-payout" id="payout-btn" onclick="showPayoutChart()" title="View Payout Chart"></div>
+
+                <!-- Transparent Display Overlays -->
+                <div id="cabinet-balance-val" class="cabinet-balance-overlay">$0000</div>
+                <div id="cabinet-bet-win-val" class="cabinet-bet-win-overlay">
+                    <div class="bet-value-box" id="cabinet-bet-val">$00</div>
+                    <div class="win-value-box" id="cabinet-win-val">$0000</div>
+                </div>
+
+                <!-- Message board inside screen -->
+                <div class="cabinet-message-board" id="cabinet-message">Insert coins and pull the lever!</div>
+
+                <!-- Broke overlay screen -->
+                <div class="broke-overlay" id="broke-overlay">
+                    <div class="broke-title">OUT OF COINS!</div>
+                    <button onclick="replenishBankroll()">Replenish Wallet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payout Modal Overlay -->
+    <div class="payout-modal-overlay" id="payout-modal" onclick="closePayoutChart()">
+        <div class="payout-modal-container" onclick="event.stopPropagation()">
+            <button class="payout-modal-close" onclick="closePayoutChart()">X</button>
+            <img class="payout-modal-img" id="payout-modal-img" src="" alt="Payout Chart">
+        </div>
+    </div>
+
+    <script>
+        // Slots Configurations and Coordinates
+        const slotMachinesConfig = {
+            pp: {
+                id: "pp",
+                name: "Pretty Princess Slots",
+                bgImage: "slots/prettyprincessslots.webp",
+                payoutImage: "slots/pp_payouts.webp",
+                reelsCount: 3,
+                reelCoords: [
+                    { left: 34.88, top: 49.00, width: 8.04, height: 4.63 },
+                    { left: 45.87, top: 48.88, width: 8.48, height: 4.83 },
+                    { left: 56.92, top: 48.88, width: 8.15, height: 4.75 }
+                ],
+                balanceCoords: { left: 40.23, top: 36.00, width: 19.36, height: 3.92 },
+                betWinCoords: { left: 36.77, top: 73.29, width: 26.67, height: 8.17 },
+                controls: {
+                    pullLever: { left: 73.38, top: 44.13, width: 8.04, height: 19.71 },
+                    addBet: { left: 37.05, top: 61.29, width: 5.02, height: 2.71 },
+                    removeBet: { left: 29.97, top: 61.54, width: 5.30, height: 2.38 },
+                    payoutChart: { left: 32.20, top: 23.50, width: 34.65, height: 8.54 }
+                },
+                symbols: [
+                    { id: "logo", file: "slots/slotreels/pp_logo.webp", payout: 2, weight: 50 },
+                    { id: "paci", file: "slots/slotreels/pp_paci.webp", payout: 3, weight: 30 },
+                    { id: "bib", file: "slots/slotreels/pp_bib.webp", payout: 3, weight: 30 },
+                    { id: "bottle", file: "slots/slotreels/pp_bottle.webp", payout: 3, weight: 30 },
+                    { id: "paddle", file: "slots/slotreels/pp_paddle.webp", payout: 5, weight: 12 },
+                    { id: "handheld", file: "slots/slotreels/pp_handheld.webp", payout: 5, weight: 12 },
+                    { id: "diaperpack", file: "slots/slotreels/pp_diaperpack.webp", payout: 5, weight: 12 },
+                    { id: "doll", file: "slots/slotreels/pp_doll.webp", payout: 10, weight: 5 }
+                ],
+                sounds: {
+                    theme: "slots/pp_theme.mp3",
+                    win: "slots/pp_win.mp3",
+                    bigwin: "slots/pp_bigwin.mp3"
+                }
+            },
+            dss: {
+                id: "dss",
+                name: "Deluxe Super-Stal Slots",
+                bgImage: "slots/superstaldeluxeslots.webp",
+                payoutImage: "slots/dss_payouts.webp",
+                reelsCount: 4,
+                reelCoords: [
+                    { left: 34.21, top: 50.92, width: 6.19, height: 4.50 },
+                    { left: 42.69, top: 51.00, width: 6.14, height: 4.33 },
+                    { left: 51.28, top: 51.04, width: 6.19, height: 4.38 },
+                    { left: 59.65, top: 50.92, width: 6.47, height: 4.42 }
+                ],
+                balanceCoords: { left: 41.13, top: 39.04, width: 17.86, height: 3.58 },
+                betWinCoords: { left: 34.60, top: 73.88, width: 28.96, height: 6.92 },
+                controls: {
+                    pullLever: { left: 71.76, top: 47.25, width: 5.75, height: 18.13 },
+                    addBet: { left: 37.39, top: 62.79, width: 3.91, height: 2.58 },
+                    removeBet: { left: 31.47, top: 62.88, width: 4.19, height: 2.42 },
+                    payoutChart: { left: 34.32, top: 27.25, width: 30.47, height: 8.17 }
+                },
+                symbols: [
+                    { id: "whitediaper", file: "slots/slotreels/dss_whitediaper.webp", payout: 2, weight: 45 },
+                    { id: "bluediaper", file: "slots/slotreels/dss_bluediaper.webp", payout: 3, weight: 28 },
+                    { id: "blackdiaper", file: "slots/slotreels/dss_blackdiaper.webp", payout: 3, weight: 28 },
+                    { id: "pinksword", file: "slots/slotreels/dss_pinksword.webp", payout: 5, weight: 15 },
+                    { id: "bluesword", file: "slots/slotreels/dss_bluesword.webp", payout: 5, weight: 15 },
+                    { id: "camosippy", file: "slots/slotreels/dss_camosippy.webp", payout: 7, weight: 12 },
+                    { id: "pinksippy", file: "slots/slotreels/dss_pinksippy.webp", payout: 7, weight: 12 },
+                    { id: "lolo", file: "slots/slotreels/dss_lolo.webp", payout: 10, weight: 8 },
+                    { id: "dere", file: "slots/slotreels/dss_dere.webp", payout: 10, weight: 8 },
+                    { id: "stal", file: "slots/slotreels/dss_stal.webp", payout: 15, weight: 5 }
+                ],
+                sounds: {
+                    theme: "slots/dss_theme.mp3",
+                    win: "slots/dss_win.mp3",
+                    bigwin: "slots/dss_bigwin.mp3"
+                }
+            },
+            bbb: {
+                id: "bbb",
+                name: "Big Bab Bounty Slots",
+                bgImage: "slots/bigbabbountyslots.webp",
+                payoutImage: "slots/bbb_payouts.webp",
+                reelsCount: 3,
+                reelCoords: [
+                    { left: 35.21, top: 48.63, width: 8.31, height: 5.08 },
+                    { left: 45.81, top: 48.54, width: 8.37, height: 5.17 },
+                    { left: 56.42, top: 48.42, width: 8.31, height: 5.33 }
+                ],
+                balanceCoords: { left: 40.35, top: 35.75, width: 19.53, height: 3.71 },
+                betWinCoords: { left: 34.77, top: 72.75, width: 30.75, height: 7.00 },
+                controls: {
+                    pullLever: { left: 73.44, top: 44.88, width: 6.92, height: 20.83 },
+                    addBet: { left: 37.61, top: 61.42, width: 4.13, height: 1.71 },
+                    removeBet: { left: 31.03, top: 61.33, width: 4.07, height: 1.58 },
+                    payoutChart: { left: 32.76, top: 23.50, width: 34.15, height: 8.29 }
+                },
+                symbols: [
+                    { id: "logo", file: "slots/slotreels/bbb_logo.webp", payout: 2, weight: 50 },
+                    { id: "paci", file: "slots/slotreels/bbb_paci.webp", payout: 3, weight: 30 },
+                    { id: "bib", file: "slots/slotreels/bbb_bib.webp", payout: 3, weight: 30 },
+                    { id: "bottle", file: "slots/slotreels/bbb_bottle.webp", payout: 3, weight: 30 },
+                    { id: "paddle", file: "slots/slotreels/bbb_paddle.webp", payout: 5, weight: 12 },
+                    { id: "handheld", file: "slots/slotreels/bbb_handheld.webp", payout: 5, weight: 12 },
+                    { id: "pack", file: "slots/slotreels/bbb_pack.webp", payout: 5, weight: 12 },
+                    { id: "doll", file: "slots/slotreels/bbb_doll.webp", payout: 10, weight: 5 } // silver teddy bears
+                ],
+                sounds: {
+                    theme: "slots/BBB_theme.mp3",
+                    win: "slots/bbb_win.mp3",
+                    bigwin: "slots/BBB_bigwin.mp3"
+                }
+            },
+            prince: {
+                id: "prince",
+                name: "Padded Prince Slots",
+                bgImage: "slots/paddedprinceslots.webp",
+                payoutImage: "slots/prince_payouts.webp",
+                reelsCount: 3,
+                reelCoords: [
+                    { left: 35.10, top: 50.58, width: 8.31, height: 5.04 },
+                    { left: 45.76, top: 50.58, width: 8.43, height: 5.04 },
+                    { left: 56.42, top: 50.54, width: 8.65, height: 5.17 }
+                ],
+                balanceCoords: { left: 39.84, top: 37.88, width: 20.54, height: 3.96 },
+                betWinCoords: { left: 40.35, top: 73.63, width: 19.08, height: 7.79 },
+                controls: {
+                    pullLever: { left: 74.44, top: 47.04, width: 6.08, height: 16.50 },
+                    addBet: { left: 37.78, top: 62.88, width: 4.41, height: 1.50 },
+                    removeBet: { left: 30.69, top: 62.75, width: 4.41, height: 1.50 },
+                    payoutChart: { left: 32.31, top: 25.54, width: 35.21, height: 8.83 }
+                },
+                symbols: [
+                    { id: "logo", file: "slots/slotreels/prince_logo.webp", payout: 2, weight: 50 },
+                    { id: "paci", file: "slots/slotreels/prince_paci.webp", payout: 3, weight: 30 },
+                    { id: "bib", file: "slots/slotreels/prince_bib.webp", payout: 3, weight: 30 },
+                    { id: "bottle", file: "slots/slotreels/prince_bottle.webp", payout: 3, weight: 30 },
+                    { id: "paddle", file: "slots/slotreels/prince_paddle.webp", payout: 5, weight: 12 },
+                    { id: "handheld", file: "slots/slotreels/prince_handheld.webp", payout: 5, weight: 12 },
+                    { id: "pack", file: "slots/slotreels/prince_pack.webp", payout: 5, weight: 12 },
+                    { id: "doll", file: "slots/slotreels/prince_doll.webp", payout: 10, weight: 5 }
+                ],
+                sounds: {
+                    theme: "slots/prince_theme.mp3",
+                    win: "slots/prince_win.mp3",
+                    bigwin: "slots/prince_bigwin.mp3"
+                }
+            }
+        };
+
+        // Game State Variables
+        let bankroll = 0;
+        let currentBet = 0;
+        let activeMachine = null;
+        let isMuted = localStorage.getItem('slots_muted') === 'true';
+        let jingleEnabled = localStorage.getItem('slots_jingle') !== 'false';
+        let globalVolume = parseFloat(localStorage.getItem('slots_volume') || '0.8');
+        let isSpinning = false;
+        let themeAudio = null;
+        
+        let spinTimers = [];
+        let spinAudioObjects = [];
+
+        // Audio Controls Helper
+        function updateMuteButtonUI() {
+            const btn = document.getElementById('mute-btn');
+            if (isMuted) {
+                btn.innerText = "🔇 Sound Off";
+            } else {
+                btn.innerText = "🔊 Sound On";
+            }
+        }
+
+        function toggleJingle() {
+            jingleEnabled = document.getElementById('jingle-toggle').checked;
+            localStorage.setItem('slots_jingle', jingleEnabled);
+            
+            if (!jingleEnabled) {
+                if (themeAudio) {
+                    themeAudio.pause();
+                }
+            } else {
+                if (activeMachine && !isMuted) {
+                    if (themeAudio) {
+                        themeAudio.play().catch(e => console.log(e));
+                    } else {
+                        themeAudio = playSound(activeMachine.sounds.theme, true);
+                    }
+                }
+            }
+        }
+
+        function adjustVolume(val) {
+            globalVolume = val / 100;
+            localStorage.setItem('slots_volume', globalVolume);
+            
+            if (themeAudio) {
+                themeAudio.volume = isMuted ? 0 : globalVolume;
+            }
+            spinAudioObjects.forEach(aud => {
+                if (aud) {
+                    aud.volume = isMuted ? 0 : globalVolume;
+                }
+            });
+        }
+
+        function initAudioControls() {
+            document.getElementById('jingle-toggle').checked = jingleEnabled;
+            document.getElementById('volume-slider').value = Math.round(globalVolume * 100);
+            updateMuteButtonUI();
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            localStorage.setItem('slots_muted', isMuted);
+            updateMuteButtonUI();
+            
+            const vol = isMuted ? 0 : globalVolume;
+            if (themeAudio) {
+                themeAudio.volume = vol;
+                if (isMuted) {
+                    themeAudio.pause();
+                } else if (jingleEnabled) {
+                    themeAudio.play().catch(e => console.log(e));
+                }
+            }
+            
+            spinAudioObjects.forEach(aud => {
+                if (aud) {
+                    aud.volume = vol;
+                    if (isMuted) aud.pause();
+                    else aud.play().catch(e => console.log(e));
+                }
+            });
+        }
+
+        function playSound(src, loop = false) {
+            try {
+                const aud = new Audio(src);
+                aud.loop = loop;
+                aud.volume = isMuted ? 0 : globalVolume;
+                if (!isMuted) {
+                    if (src.includes('theme') && !jingleEnabled) {
+                        // don't play
+                    } else {
+                        aud.play().catch(e => console.log("Sound play blocked: ", e));
+                    }
+                }
+                return aud;
+            } catch (e) {
+                console.error(e);
+                return null;
+            }
+        }
+
+        // Routing Helper
+        function switchGamePage(game) {
+            if (game === 'blackjack') {
+                window.location.href = 'index.html';
+            } else if (game === 'holdem') {
+                window.location.href = 'holdem.html';
+            }
+        }
+
+        // Initialize bankroll on load or betting rules change
+        function resetSessionBankroll() {
+            const mode = document.getElementById('betting-mode').value;
+            if (mode === 'high') {
+                bankroll = 1000;
+                currentBet = 50;
+            } else {
+                bankroll = 200;
+                currentBet = 10;
+            }
+            updateLedDisplay();
+        }
+
+        // Active Cabinet Display Logic
+        function selectMachine(machineId) {
+            // Clear any active screen blurs
+            document.getElementById('gallery-wrapper').classList.add('blurred');
+            
+            // Set active machine config
+            activeMachine = slotMachinesConfig[machineId];
+            
+            // If bankroll hasn't been set, initialize it
+            if (bankroll <= 0) {
+                resetSessionBankroll();
+            }
+
+            // Bind cabinet background and coords
+            const container = document.getElementById('cabinet-container');
+            const bg = document.getElementById('cabinet-background');
+            bg.src = activeMachine.bgImage;
+
+            // Positioning controls dynamically (percentage metrics)
+            const lever = document.getElementById('lever-btn');
+            const add = document.getElementById('addbet-btn');
+            const remove = document.getElementById('removebet-btn');
+            const payout = document.getElementById('payout-btn');
+
+            lever.style.left = activeMachine.controls.pullLever.left + '%';
+            lever.style.top = activeMachine.controls.pullLever.top + '%';
+            lever.style.width = activeMachine.controls.pullLever.width + '%';
+            lever.style.height = activeMachine.controls.pullLever.height + '%';
+
+            add.style.left = activeMachine.controls.addBet.left + '%';
+            add.style.top = activeMachine.controls.addBet.top + '%';
+            add.style.width = activeMachine.controls.addBet.width + '%';
+            add.style.height = activeMachine.controls.addBet.height + '%';
+
+            remove.style.left = activeMachine.controls.removeBet.left + '%';
+            remove.style.top = activeMachine.controls.removeBet.top + '%';
+            remove.style.width = activeMachine.controls.removeBet.width + '%';
+            remove.style.height = activeMachine.controls.removeBet.height + '%';
+
+            payout.style.left = activeMachine.controls.payoutChart.left + '%';
+            payout.style.top = activeMachine.controls.payoutChart.top + '%';
+            payout.style.width = activeMachine.controls.payoutChart.width + '%';
+            payout.style.height = activeMachine.controls.payoutChart.height + '%';
+
+            // Positioning display overlays dynamically (percentage metrics)
+            const balanceOverlay = document.getElementById('cabinet-balance-val');
+            const betWinOverlay = document.getElementById('cabinet-bet-win-val');
+
+            balanceOverlay.style.left = activeMachine.balanceCoords.left + '%';
+            balanceOverlay.style.top = activeMachine.balanceCoords.top + '%';
+            balanceOverlay.style.width = activeMachine.balanceCoords.width + '%';
+            balanceOverlay.style.height = activeMachine.balanceCoords.height + '%';
+
+            betWinOverlay.style.left = activeMachine.betWinCoords.left + '%';
+            betWinOverlay.style.top = activeMachine.betWinCoords.top + '%';
+            betWinOverlay.style.width = activeMachine.betWinCoords.width + '%';
+            betWinOverlay.style.height = activeMachine.betWinCoords.height + '%';
+
+            // Set dynamic accent styles for glows
+            let accentColor = '';
+            let glowColor = '';
+            let leverHoverColor = '';
+
+            if (machineId === 'pp') {
+                accentColor = 'rgba(255, 102, 204, 0.3)';
+                glowColor = 'rgba(255, 102, 204, 0.6)';
+                leverHoverColor = 'rgba(255, 192, 203, 0.5)';
+            } else if (machineId === 'prince') {
+                accentColor = 'rgba(51, 204, 255, 0.3)';
+                glowColor = 'rgba(51, 204, 255, 0.6)';
+                leverHoverColor = 'rgba(173, 216, 230, 0.5)';
+            } else if (machineId === 'bbb') {
+                accentColor = 'rgba(205, 127, 50, 0.3)';
+                glowColor = 'rgba(205, 127, 50, 0.6)';
+                leverHoverColor = 'rgba(173, 216, 230, 0.5)';
+            } else if (machineId === 'dss') {
+                accentColor = 'rgba(255, 215, 0, 0.3)';
+                glowColor = 'rgba(255, 215, 0, 0.6)';
+                leverHoverColor = 'rgba(173, 216, 230, 0.5)';
+            }
+
+            container.style.setProperty('--machine-accent-rgba', accentColor);
+            container.style.setProperty('--machine-accent-glow', glowColor);
+            container.style.setProperty('--lever-hover-glow', leverHoverColor);
+
+            // Add glows to bet buttons
+            document.getElementById('addbet-btn').classList.add('glow-active');
+            document.getElementById('removebet-btn').classList.add('glow-active');
+
+            // Generate reels
+            renderReels();
+
+            // Clear Win display and reset message
+            document.getElementById('cabinet-win-val').innerText = "$0000";
+            document.getElementById('cabinet-message').innerText = "Hold your breath and pull the lever!";
+            document.getElementById('broke-overlay').style.display = 'none';
+
+            // Show cabinet screen modal
+            document.getElementById('cabinet-modal').style.display = 'flex';
+            updateLedDisplay();
+            initAudioControls();
+
+            // Play Theme loop
+            if (themeAudio) {
+                themeAudio.pause();
+            }
+            themeAudio = playSound(activeMachine.sounds.theme, true);
+        }
+
+        function closeMachine() {
+            if (isSpinning) return; // Prevent closing while spin is running
+            
+            // Stop looping theme
+            if (themeAudio) {
+                themeAudio.pause();
+                themeAudio = null;
+            }
+
+            // Hide modal
+            document.getElementById('cabinet-modal').style.display = 'none';
+            document.getElementById('gallery-wrapper').classList.remove('blurred');
+            activeMachine = null;
+        }
+
+        // Render Initial Reel symbols inside slot coords
+        function renderReels() {
+            const layer = document.getElementById('reels-layer');
+            layer.innerHTML = '';
+
+            activeMachine.reelCoords.forEach((coord, i) => {
+                const reel = document.createElement('div');
+                reel.className = 'reel';
+                reel.id = `reel-${i}`;
+                reel.style.left = coord.left + '%';
+                reel.style.top = coord.top + '%';
+                reel.style.width = coord.width + '%';
+                reel.style.height = coord.height + '%';
+
+                const img = document.createElement('img');
+                img.className = 'reel-img';
+                img.id = `reel-img-${i}`;
+                
+                // Random starting symbol
+                const sym = activeMachine.symbols[Math.floor(Math.random() * activeMachine.symbols.length)];
+                img.src = sym.file;
+
+                reel.appendChild(img);
+                layer.appendChild(reel);
+            });
+        }
+
+        // Payout modal logic
+        function showPayoutChart() {
+            if (!activeMachine) return;
+            const modalImg = document.getElementById('payout-modal-img');
+            modalImg.src = activeMachine.payoutImage;
+            document.getElementById('payout-modal').style.display = 'flex';
+        }
+
+        function closePayoutChart() {
+            document.getElementById('payout-modal').style.display = 'none';
+        }
+
+        // Betting Logic
+        function adjustBetAction(direction) {
+            if (isSpinning) return;
+            const mode = document.getElementById('betting-mode').value;
+            const step = mode === 'high' ? 50 : 5;
+            const minBet = mode === 'high' ? 50 : 5;
+            const maxBet = mode === 'high' ? 500 : 100;
+
+            const prevBet = currentBet;
+            currentBet += direction * step;
+
+            if (currentBet < minBet) currentBet = minBet;
+            if (currentBet > maxBet) currentBet = maxBet;
+            if (currentBet > bankroll) currentBet = Math.max(minBet, Math.floor(bankroll / minBet) * minBet);
+
+            if (currentBet !== prevBet) {
+                if (direction > 0) {
+                    playSound('slots/tokenreceived.mp3');
+                } else {
+                    playSound('slots/token_removed.mp3');
+                }
+            }
+            updateLedDisplay();
+        }
+
+        function updateLedDisplay() {
+            document.getElementById('cabinet-balance-val').innerText = '$' + String(bankroll).padStart(4, '0');
+            document.getElementById('cabinet-bet-val').innerText = '$' + String(currentBet).padStart(2, '0');
+        }
+
+        // Weighted symbol picker
+        function pickWeightedSymbol() {
+            const symbols = activeMachine.symbols;
+            const totalWeight = symbols.reduce((sum, s) => sum + s.weight, 0);
+            let rand = Math.random() * totalWeight;
+
+            for (const s of symbols) {
+                if (rand < s.weight) {
+                    return s;
+                }
+                rand -= s.weight;
+            }
+            return symbols[symbols.length - 1];
+        }
+
+        // Lever Pull and Reels Spinning logic
+        function pullLever() {
+            if (isSpinning) return;
+            if (bankroll < currentBet) {
+                // Out of coins! Show Broke Screen
+                document.getElementById('broke-overlay').style.display = 'flex';
+                playSound('slots/token_removed.mp3');
+                return;
+            }
+
+            isSpinning = true;
+            document.getElementById('cabinet-message').innerText = "Spinning...";
+            document.getElementById('cabinet-win-val').innerText = "$0000";
+
+            // Remove glows from bet buttons during spin
+            document.getElementById('addbet-btn').classList.remove('glow-active');
+            document.getElementById('removebet-btn').classList.remove('glow-active');
+
+            // Deduct Bet immediately
+            bankroll -= currentBet;
+            updateLedDisplay();
+
+            // Play lever sound
+            playSound('slots/pullthelever.mp3');
+
+            // Select Outcomes (Boosted win rates & Hidden payouts check)
+            const roll = Math.random() * 100;
+            let results = [];
+
+            if (activeMachine.reelsCount === 3) {
+                if (roll < 5.0) {
+                    results = forceThreeReelBigWin();
+                } else if (roll < 15.0) {
+                    results = forceThreeReelSmallWin();
+                } else {
+                    for (let i = 0; i < activeMachine.reelsCount; i++) {
+                        results.push(pickWeightedSymbol());
+                    }
+                }
+            } else {
+                if (roll < 2.5) {
+                    results = forceFourReelBigWin();
+                } else if (roll < 7.5) {
+                    results = forceFourReelSmallWin();
+                } else {
+                    for (let i = 0; i < activeMachine.reelsCount; i++) {
+                        results.push(pickWeightedSymbol());
+                    }
+                }
+            }
+
+            // Spin animation setup
+            spinTimers = [];
+            spinAudioObjects = [];
+
+            // Spin each reel
+            for (let i = 0; i < activeMachine.reelsCount; i++) {
+                const img = document.getElementById(`reel-img-${i}`);
+                
+                // Interval to swap images rapidly to simulate spin
+                const intervalId = setInterval(() => {
+                    const randomSym = activeMachine.symbols[Math.floor(Math.random() * activeMachine.symbols.length)];
+                    img.src = randomSym.file;
+                }, 60);
+                
+                spinTimers.push(intervalId);
+
+                // Staggered spinning sounds starting offset for realism
+                setTimeout(() => {
+                    if (isSpinning) {
+                        const aud = playSound('slots/slotsspinning.mp3', true);
+                        spinAudioObjects[i] = aud;
+                    }
+                }, i * 150);
+            }
+
+            // Staggered stop timers
+            activeMachine.reelCoords.forEach((coord, i) => {
+                const stopDelay = 1500 + i * 500; // staggered: 1.5s, 2.0s, 2.5s, 3.0s
+
+                setTimeout(() => {
+                    // Stop interval cycling
+                    clearInterval(spinTimers[i]);
+
+                    // Set final outcome symbol
+                    const img = document.getElementById(`reel-img-${i}`);
+                    img.src = results[i].file;
+
+                    // Stop spinning audio loop for this reel
+                    if (spinAudioObjects[i]) {
+                        spinAudioObjects[i].pause();
+                        spinAudioObjects[i] = null;
+                    }
+
+                    // If last reel stops, evaluate game outcome
+                    if (i === activeMachine.reelsCount - 1) {
+                        evaluateOutcome(results);
+                    }
+                }, stopDelay);
+            });
+        }
+
+        // Forced Outcome Generators for Win Rate Boosts
+        function forceThreeReelBigWin() {
+            const dollSym = activeMachine.symbols.find(s => s.id === 'doll');
+            return [dollSym, dollSym, dollSym];
+        }
+
+        function forceThreeReelSmallWin() {
+            const symbols = activeMachine.symbols;
+            const nonDoll = symbols.filter(s => s.id !== 'doll');
+            const nonDollNonLogo = nonDoll.filter(s => s.id !== 'logo');
+            const logoSym = symbols.find(s => s.id === 'logo');
+            const bibSym = symbols.find(s => s.id === 'bib');
+            const packSym = symbols.find(s => s.id === 'pack' || s.id === 'diaperpack');
+            const dollSym = symbols.find(s => s.id === 'doll');
+
+            const opt = Math.floor(Math.random() * 4);
+            if (opt === 0 && nonDoll.length > 0) {
+                const s = nonDoll[Math.floor(Math.random() * nonDoll.length)];
+                return [s, s, s];
+            } else if (opt === 1 && nonDollNonLogo.length > 0 && logoSym) {
+                const s = nonDollNonLogo[Math.floor(Math.random() * nonDollNonLogo.length)];
+                return [s, logoSym, s];
+            } else if (opt === 2 && logoSym && nonDollNonLogo.length > 0) {
+                const s = nonDollNonLogo[Math.floor(Math.random() * nonDollNonLogo.length)];
+                const arr = [logoSym, logoSym, s];
+                return arr.sort(() => Math.random() - 0.5);
+            } else if (opt === 3 && bibSym && packSym && dollSym) {
+                const arr = [bibSym, packSym, dollSym];
+                return arr.sort(() => Math.random() - 0.5);
+            }
+            const fallback = nonDoll[0] || symbols[0];
+            return [fallback, fallback, fallback];
+        }
+
+        function forceFourReelBigWin() {
+            const symbols = activeMachine.symbols;
+            const bigSyms = symbols.filter(s => s.id === 'stal' || s.id === 'lolo' || s.id === 'dere');
+            const stalSym = symbols.find(s => s.id === 'stal');
+            const loloSym = symbols.find(s => s.id === 'lolo');
+            const dereSym = symbols.find(s => s.id === 'dere');
+            const whiteSym = symbols.find(s => s.id === 'whitediaper');
+
+            const opt = Math.floor(Math.random() * 2);
+            if (opt === 0 && bigSyms.length > 0) {
+                const s = bigSyms[Math.floor(Math.random() * bigSyms.length)];
+                return [s, s, s, s];
+            } else if (opt === 1 && stalSym && loloSym && dereSym && whiteSym) {
+                const arr = [stalSym, loloSym, dereSym, whiteSym];
+                return arr.sort(() => Math.random() - 0.5);
+            }
+            const fallback = symbols.find(s => s.id === 'stal') || symbols[0];
+            return [fallback, fallback, fallback, fallback];
+        }
+
+        function forceFourReelSmallWin() {
+            const symbols = activeMachine.symbols;
+            const smallSyms = symbols.filter(s => s.id !== 'stal' && s.id !== 'lolo' && s.id !== 'dere');
+            const diapers = symbols.filter(s => s.id === 'whitediaper' || s.id === 'bluediaper' || s.id === 'blackdiaper');
+
+            const opt = Math.floor(Math.random() * 3);
+            if (opt === 0 && smallSyms.length > 0) {
+                const s = smallSyms[Math.floor(Math.random() * smallSyms.length)];
+                return [s, s, s, s];
+            } else if (opt === 1 && diapers.length > 0) {
+                const arr = [];
+                for (let i = 0; i < 4; i++) {
+                    arr.push(diapers[Math.floor(Math.random() * diapers.length)]);
+                }
+                return arr;
+            } else if (opt === 2) {
+                const s1 = symbols[Math.floor(Math.random() * symbols.length)];
+                let s2 = symbols[Math.floor(Math.random() * symbols.length)];
+                while (s2.id === s1.id) {
+                    s2 = symbols[Math.floor(Math.random() * symbols.length)];
+                }
+                const arr = [s1, s1, s2, s2];
+                return arr.sort(() => Math.random() - 0.5);
+            }
+            const fallback = smallSyms[0] || symbols[0];
+            return [fallback, fallback, fallback, fallback];
+        }
+
+        // Hidden Payout and Win Evaluators
+        function evaluateThreeReelPayout(results) {
+            const ids = results.map(r => r.id);
+            
+            // 1. Direct 3 matching (Standard)
+            const allSame = ids.every(id => id === ids[0]);
+            if (allSame) {
+                const finalSymbol = results[0];
+                return { isWin: true, name: `3 Matching ${finalSymbol.id.toUpperCase()}`, multiplier: finalSymbol.payout, isBig: finalSymbol.payout >= 10 };
+            }
+            
+            // 2. Logo Wildcard in Center
+            if (ids[1] === 'logo' && ids[0] === ids[2] && ids[0] !== 'logo') {
+                const outerSymbol = results[0];
+                if (outerSymbol.id !== 'doll') {
+                    return { isWin: true, name: `Wildcard 3 ${outerSymbol.id.toUpperCase()}`, multiplier: outerSymbol.payout, isBig: false };
+                }
+            }
+            
+            // 3. Pair of Logos (wildcard payout)
+            const logoCount = ids.filter(id => id === 'logo').length;
+            if (logoCount === 2) {
+                return { isWin: true, name: "Pair of Logos", multiplier: 2, isBig: false };
+            }
+            
+            // 4. Bib, Pack & Doll Combo in any order
+            const hasBib = ids.includes('bib');
+            const hasPack = ids.includes('diaperpack') || ids.includes('pack');
+            const hasDoll = ids.includes('doll');
+            if (hasBib && hasPack && hasDoll) {
+                return { isWin: true, name: "Bib, Pack & Doll Combo", multiplier: 2, isBig: false };
+            }
+            
+            return { isWin: false };
+        }
+
+        function evaluateFourReelPayout(results) {
+            const ids = results.map(r => r.id);
+            
+            // 1. Direct 4 matching (Standard)
+            const allSame = ids.every(id => id === ids[0]);
+            if (allSame) {
+                const finalSymbol = results[0];
+                return { isWin: true, name: `4 Matching ${finalSymbol.id.toUpperCase()}`, multiplier: finalSymbol.payout, isBig: finalSymbol.payout >= 10 };
+            }
+            
+            // 2. Funtime Flush: 1 Stal, 1 Lolo, 1 Dere, 1 White Diaper
+            const hasStal = ids.includes("stal");
+            const hasLolo = ids.includes("lolo");
+            const hasDere = ids.includes("dere");
+            const hasWhite = ids.includes("whitediaper");
+            if (hasStal && hasLolo && hasDere && hasWhite) {
+                return { isWin: true, name: "Funtime Flush!", multiplier: 20, isBig: true };
+            }
+            
+            // 3. Any combination of 4 diapers
+            const diaperSymbols = ["whitediaper", "bluediaper", "blackdiaper"];
+            const allDiapers = ids.every(id => diaperSymbols.includes(id));
+            if (allDiapers) {
+                return { isWin: true, name: "Diaper Combo", multiplier: 2, isBig: false };
+            }
+            
+            // 4. Two Pair of any icons
+            const counts = {};
+            ids.forEach(id => counts[id] = (counts[id] || 0) + 1);
+            const valCount = Object.values(counts);
+            if (valCount.length === 2 && valCount[0] === 2 && valCount[1] === 2) {
+                return { isWin: true, name: "Two Pair", multiplier: 3, isBig: false };
+            }
+            
+            return { isWin: false };
+        }
+
+        // Evaluate victory and payouts
+        function evaluateOutcome(results) {
+            isSpinning = false;
+            
+            // Add glows back to bet buttons
+            document.getElementById('addbet-btn').classList.add('glow-active');
+            document.getElementById('removebet-btn').classList.add('glow-active');
+
+            let outcome;
+            if (activeMachine.reelsCount === 3) {
+                outcome = evaluateThreeReelPayout(results);
+            } else {
+                outcome = evaluateFourReelPayout(results);
+            }
+
+            if (outcome.isWin) {
+                // payout to 1: add back bet + payout profit
+                const totalPayout = currentBet + (currentBet * outcome.multiplier);
+                bankroll += totalPayout;
+                updateLedDisplay();
+
+                const winAmount = currentBet * outcome.multiplier;
+                document.getElementById('cabinet-win-val').innerText = '$' + String(winAmount).padStart(4, '0');
+                document.getElementById('cabinet-message').innerText = `WINNER! ${outcome.name} ($${winAmount})`;
+
+                // Play win sound
+                if (outcome.isBig) {
+                    playSound(activeMachine.sounds.bigwin);
+                } else {
+                    playSound(activeMachine.sounds.win);
+                }
+            } else {
+                document.getElementById('cabinet-message').innerText = "Good luck next time!";
+                if (bankroll < currentBet) {
+                    // Check if player is completely out of funds
+                    setTimeout(() => {
+                        if (bankroll < currentBet && !isSpinning) {
+                            document.getElementById('broke-overlay').style.display = 'flex';
+                        }
+                    }, 800);
+                }
+            }
+        }
+
+        // Replenish wallet
+        function replenishBankroll() {
+            playSound('slots/tokenreceived.mp3');
+            const mode = document.getElementById('betting-mode').value;
+            bankroll = mode === 'high' ? 1000 : 200;
+            document.getElementById('broke-overlay').style.display = 'none';
+            document.getElementById('cabinet-message').innerText = "Coins refilled! Pull the lever!";
+            updateLedDisplay();
+        }
+
+        // Preload bankroll state
+        resetSessionBankroll();
+    </script>
+</body>
+
+</html>
