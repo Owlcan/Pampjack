@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lulu's Fantasy Roulette</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --wood-dark: #2a160b;
+            --wood-light: #4b2e1b;
+            --felt-green: #0b4a22;
+            --gold: #d4af37;
+            --gold-light: #ffd700;
+            --text-color: #fce8b2;
+            --board-max-width: 95vw;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'MedievalSharp', serif;
+            background: repeating-linear-gradient(45deg,
+                    var(--wood-dark),
+                    var(--wood-dark) 10px,
+                    var(--wood-light) 10px,
+                    var(--wood-light) 20px);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        h1 {
+            color: var(--gold-light);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            margin-top: 15px;
+            margin-bottom: 15px;
+            font-size: 2.5rem;
+            text-align: center;
+        }
+
+        .container {
+            background-color: var(--felt-green);
+            border: 6px solid var(--gold);
+            border-radius: 20px;
+            box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            width: 95%;
+            max-width: var(--board-max-width);
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        /* --- Setup Screen --- */
+        #setup-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        .setup-group {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--gold);
+            text-align: center;
+        }
+
+        .dropdowns-row {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 10px;
+        }
+
+        .dropdowns-row .setup-group {
+            flex: 1 1 250px;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        select,
+        button {
+            font-family: 'MedievalSharp', serif;
+            background-color: var(--wood-dark);
+            color: var(--gold-light);
+            border: 2px solid var(--gold);
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select {
+            margin: 0 10px;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--gold);
+            color: var(--wood-dark);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #777;
+            color: #777;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .game-picker-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            justify-content: center;
+            justify-items: center;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        @media (min-width: 768px) {
+            .game-picker-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .game-card {
+            cursor: pointer;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 4px solid transparent;
+            opacity: 0.6;
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 280px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+        }
+
+        .game-card:hover {
+            opacity: 0.95;
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.8);
+        }
+
+        .game-card.active-game {
+            border-color: var(--gold-light);
+            box-shadow: 0 0 25px var(--gold-light);
+            opacity: 1;
+        }
+
+        .game-card.active-game:hover {
+            transform: translateY(-2px);
+        }
+
+        /* --- Game Screen Layout --- */
+        #game-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        /* Viewport maintaining 2752x2778 internal coordinate system scaled down */
+        #roulette-table-viewport {
+            width: 100%;
+            max-width: 1200px;
+            aspect-ratio: 2752 / 2778;
+            background: #111;
+            border: 6px solid var(--gold);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #roulette-table-board {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            width: 2752px;
+            height: 2778px;
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            background-image: url('roulette/rouletteclare1.webp');
+            transition: background-image 0.25s ease-in-out;
+        }
+
+        /* Wheel Container */
+        #roulette-wheel-container {
+            position: absolute;
+            left: 2px;
+            top: 2px;
+            width: 1112px;
+            height: 1112px;
+            border-radius: 50%;
+        }
+
+        #roulette-wheel-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        #roulette-ball-img {
+            position: absolute;
+            width: 62px;
+            height: 62px;
+            object-fit: contain;
+            z-index: 10;
+        }
+
+        /* Board Container */
+        #roulette-board-container {
+            position: absolute;
+            left: 35px;
+            top: 1245px;
+            width: 2698px;
+            height: 1512px;
+            cursor: pointer;
+        }
+
+        #roulette-board-img {
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+        }
+
+        /* Board Interactive Layer & Highlights */
+        #board-interactive-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 15;
+        }
+
+        #board-highlight {
+            position: absolute;
+            background: rgba(255, 215, 0, 0.4);
+            border: 2px solid var(--gold-light);
+            border-radius: 5px;
+            pointer-events: none;
+            display: none;
+            z-index: 12;
+        }
+
+        #chips-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .board-chip-stack {
+            position: absolute;
+            width: 72px;
+            height: 80px;
+            transform: translate(-50%, -50%) scale(1.4);
+            transform-origin: center bottom;
+        }
+
+        .board-chip-stack .coin-image {
+            position: absolute;
+            left: 0;
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            filter: drop-shadow(1px 2px 2px rgba(0, 0, 0, 0.6));
+        }
+
+        /* Status & Bets Panels */
+        #status-area {
+            text-align: center;
+            font-size: 1.4rem;
+            color: #fff;
+            text-shadow: 2px 2px 4px #000;
+            min-height: 50px;
+            margin-top: 0;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+
+        #players-info-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+
+        .player-info-card {
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--gold);
+            border-radius: 10px;
+            padding: 10px 15px;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .active-player-card {
+            border-color: var(--gold-light);
+            box-shadow: 0 0 15px var(--gold-light);
+        }
+
+        .player-info-title {
+            font-size: 1.25rem;
+            color: var(--gold-light);
+            font-weight: bold;
+        }
+
+        .player-info-bankroll {
+            font-size: 1.1rem;
+            color: #fff;
+            margin: 5px 0;
+        }
+
+        .player-info-bet {
+            font-size: 1rem;
+            color: #ccc;
+        }
+
+        /* --- Side Column Layout --- */
+        .game-layout-row {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            width: 100%;
+            max-width: 1800px;
+        }
+
+        .side-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 260px;
+            flex-shrink: 0;
+            margin-top: 20px;
+        }
+
+        .left-column {
+            justify-content: flex-start;
+        }
+
+        .right-column {
+            justify-content: flex-start;
+        }
+
+        .chip-selector-group {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 25px 15px;
+            border-radius: 40px;
+            border: 2px solid var(--gold);
+            align-items: center;
+        }
+
+        .chip-option {
+            width: 55px;
+            height: 55px;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: transform 0.2s, filter 0.2s;
+            filter: drop-shadow(2px 4px 4px rgba(0, 0, 0, 0.5));
+            border: 3px solid transparent;
+        }
+
+        .chip-option:hover {
+            transform: scale(1.1) translateY(-2px);
+        }
+
+        .chip-option.selected-chip {
+            border-color: var(--gold-light);
+            transform: scale(1.1) translateY(-4px);
+            filter: drop-shadow(2px 6px 8px rgba(0, 0, 0, 0.7));
+        }
+
+        .actions-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .actions-group button {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Responsive fallback for narrow screens */
+        @media (max-width: 1350px) {
+            .game-layout-row {
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+            }
+            .side-column {
+                width: 100%;
+                max-width: 800px;
+                margin-top: 0;
+            }
+            .chip-selector-group {
+                flex-direction: row;
+                padding: 8px 25px;
+                border-radius: 30px;
+            }
+            .actions-group {
+                flex-direction: row;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            .actions-group button {
+                width: auto;
+                min-width: 150px;
+            }
+            #players-info-bar {
+                flex-direction: row;
+                justify-content: space-around;
+            }
+            .player-info-card {
+                width: auto;
+                min-width: 250px;
+            }
+        }
+    </style>
+    <script src="casinoSaveManager.js"></script>
+</head>
+
+<body>
+    <!-- Background music & toggle -->
+    <audio id="bg-music" src="Casino Theme.mp3" loop></audio>
+    <button id="btn-audio" onclick="toggleAudio()"
+        style="position: absolute; right: 20px; top: 20px; z-index: 1000; background: rgba(0,0,0,0.6); padding: 8px 12px; border-radius: 5px; font-size: 1rem; border: 1px solid var(--gold); color: var(--gold-light);">🎵
+        Play Music</button>
+
+    <div class="container">
+        <!-- Save & Session Management Bar -->
+        <div id="save-session-bar" style="background: rgba(0, 0, 0, 0.4); border: 2px solid var(--gold); border-radius: 10px; padding: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; width: 100%; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.3rem; color: var(--gold-light); font-weight: bold;">SHARED WALLET:</span>
+                <span id="session-bankroll-display" style="font-size: 1.4rem; color: #fff; font-family: monospace; font-weight: bold; background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--gold);">$200.00</span>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button id="btn-adjust-funds" onclick="openAdjustmentModal()" style="padding: 6px 12px; font-size: 0.95rem; background-color: var(--wood-dark); margin: 0;">Adjust Wallet</button>
+                <button id="btn-export-session" onclick="CasinoSaveManager.exportSave()" style="padding: 6px 12px; font-size: 0.95rem; background-color: var(--wood-dark); margin: 0;">Export Save</button>
+                <button id="btn-import-session" onclick="document.getElementById('import-file-input').click()" style="padding: 6px 12px; font-size: 0.95rem; background-color: var(--wood-dark); margin: 0;">Import Save</button>
+                <input type="file" id="import-file-input" style="display: none;" onchange="handleSaveImport(event)">
+            </div>
+        </div>
+
+        <!-- Adjustment Modal -->
+        <div id="wallet-adjust-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 9999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+            <div class="setup-group" style="max-width: 400px; width: 90%; background-color: var(--felt-green); border: 4px solid var(--gold); padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                <h2 style="color: var(--gold-light); margin-top: 0;">Adjust Wallet Balance</h2>
+                <div style="margin-bottom: 15px; text-align: left;">
+                    <label style="display: block; margin-bottom: 5px; color: var(--gold-light);">Action:</label>
+                    <select id="adjust-action" style="width: 100%; box-sizing: border-box; background-color: var(--wood-dark); color: var(--gold-light); margin: 0;">
+                        <option value="add">Add Funds (Buy-in / Deposit)</option>
+                        <option value="remove">Remove Funds (Cash Out)</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 15px; text-align: left;">
+                    <label style="display: block; margin-bottom: 5px; color: var(--gold-light);">Amount ($):</label>
+                    <input type="number" id="adjust-amount" min="1" step="1" value="100" style="width: 100%; box-sizing: border-box; font-family: 'MedievalSharp', serif; background-color: var(--wood-dark); color: var(--gold-light); border: 2px solid var(--gold); padding: 8px; border-radius: 6px; font-size: 1.1rem;">
+                </div>
+                <div style="margin-bottom: 20px; text-align: left;">
+                    <label style="display: block; margin-bottom: 5px; color: var(--gold-light);">Optional Session Note:</label>
+                    <input type="text" id="adjust-note" placeholder="e.g. Bought more chips, cashed out" style="width: 100%; box-sizing: border-box; font-family: 'MedievalSharp', serif; background-color: var(--wood-dark); color: var(--gold-light); border: 2px solid var(--gold); padding: 8px; border-radius: 6px; font-size: 1.1rem;">
+                </div>
+                <div style="display: flex; gap: 15px; justify-content: space-between;">
+                    <button onclick="closeAdjustmentModal()" style="flex: 1; background-color: #333; border-color: #555; margin: 0;">Cancel</button>
+                    <button onclick="submitAdjustment()" style="flex: 1; margin: 0;">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+    <div class="container">
+        <!-- Setup Screen -->
+        <div id="setup-screen">
+            <div class="game-picker-container">
+                <div class="game-card" onclick="switchGamePage('blackjack')">
+                    <img src="deck of cards game/blackjackattract.webp" alt="Blackjack (Dealer: Kiki)"
+                        style="width: 100%; display: block;">
+                </div>
+                <div class="game-card" onclick="switchGamePage('holdem')">
+                    <img src="deck of cards game/holdemattract.webp" alt="Texas Hold'em (Dealer: Elva)"
+                        style="width: 100%; display: block;">
+                </div>
+                <div class="game-card" onclick="switchGamePage('slots')">
+                    <img src="slots/slotmachineattract.webp" alt="Slots" style="width: 100%; display: block;">
+                </div>
+                <div class="game-card active-game" onclick="switchGamePage('roulette')">
+                    <img src="roulette/rouletteattract.webp" alt="Roulette (Dealer: Clare)"
+                        style="width: 100%; display: block;">
+                </div>
+                <div class="game-card" onclick="switchGamePage('ceelo')">
+                    <img src="dice/ceeloattract.webp" alt="Cee-lo (Dealer: Vae)" style="width: 100%; display: block;">
+                </div>
+                <div class="game-card" onclick="switchGamePage('targetshooter')">
+                    <img src="targetshooter/diaperdollroundupattract.webp" alt="Target Shooter" style="width: 100%; display: block;">
+                </div>
+            </div>
+
+            <div class="dropdowns-row">
+                <div class="setup-group">
+                    <h2>Game Mode</h2>
+                    <select id="mode-select" onchange="togglePlayerSetup()">
+                        <option value="1">Dealer vs 1 Player</option>
+                        <option value="3">Dealer vs 3 Players</option>
+                    </select>
+                </div>
+
+                <div class="setup-group">
+                    <h2>Betting Rules</h2>
+                    <select id="betting-mode">
+                        <option value="low">Low Roller (Min $5, Max $100)</option>
+                        <option value="high">High Roller (Min $50, Max $1000)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="setup-group" id="player-configs">
+                <h2>Players</h2>
+                <div id="p1-config">
+                    <label>Player 1:</label>
+                    <select id="p1-type">
+                        <option value="human">Human</option>
+                        <option value="ai">AI</option>
+                    </select>
+                </div>
+                <div id="p2-config" class="hidden">
+                    <label>Player 2:</label>
+                    <select id="p2-type">
+                        <option value="ai">AI</option>
+                        <option value="human">Human</option>
+                    </select>
+                </div>
+                <div id="p3-config" class="hidden">
+                    <label>Player 3:</label>
+                    <select id="p3-type">
+                        <option value="ai">AI</option>
+                        <option value="human">Human</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 20px;">
+                <button onclick="startGame()">Take a Seat</button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen">
+            <div class="game-layout-row">
+                <!-- Left Column: Chip Selection -->
+                <div class="side-column left-column">
+                    <div class="side-panel-title" style="font-family: 'MedievalSharp', serif; color: var(--gold-light); font-size: 1.4rem; margin-bottom: 10px; text-shadow: 2px 2px 4px #000; text-align: center;">Select Chip</div>
+                    <div class="chip-selector-group" id="chip-selectors">
+                        <img src="coppercoin.png" class="chip-option selected-chip" id="chip-5" onclick="selectChip(5)"
+                            alt="Copper Chip ($5)">
+                        <img src="silvercoin.png" class="chip-option" id="chip-25" onclick="selectChip(25)"
+                            alt="Silver Chip ($25)">
+                        <img src="goldcoin.png" class="chip-option" id="chip-100" onclick="selectChip(100)"
+                            alt="Gold Chip ($100)">
+                    </div>
+                </div>
+
+                <!-- Center Column: Table Viewport -->
+                <div id="roulette-table-viewport">
+                    <div id="roulette-table-board">
+                        <!-- Wheel container -->
+                        <div id="roulette-wheel-container">
+                            <img id="roulette-wheel-img" src="roulette/wheel.webp" alt="Wheel">
+                            <img id="roulette-ball-img" src="roulette/ball.webp" alt="Ball" class="hidden">
+                        </div>
+                        <!-- Board container -->
+                        <div id="roulette-board-container">
+                            <img id="roulette-board-img" src="roulette/board.webp" alt="Board">
+                            <div id="board-interactive-overlay" onmousemove="onBoardHover(event)"
+                                onmouseout="onBoardLeave()" onclick="onBoardClick(event)"></div>
+                            <div id="board-highlight"></div>
+                            <div id="chips-layer"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Info & Actions -->
+                <div class="side-column right-column">
+                    <!-- Status message -->
+                    <div id="status-area">Welcome to Clare's table! Place your bets on the board.</div>
+                    <!-- Players bankrolls and current bets -->
+                    <div id="players-info-bar"></div>
+                    <!-- Actions -->
+                    <div class="actions-group">
+                        <button id="btn-spin" onclick="spinWheel()">Spin</button>
+                        <button id="btn-clear" onclick="clearBets()">Clear Bets</button>
+                        <button id="btn-next-round" onclick="startNextRound()" class="hidden">Next Round</button>
+                        <button id="btn-quit" onclick="quitGame()">Cash Out & Quit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load coordinates maps data -->
+    <script>
+        const BOARD_MAP = [{ "name": "0", "coords": [152, 607, 220, 1006, 323, 1009, 325, 201, 220, 205], "shape": "poly" }, { "name": "1", "coords": [339, 747, 496, 1009], "shape": "rect" }, { "name": "2", "coords": [338, 475, 497, 737], "shape": "rect" }, { "name": "3", "coords": [337, 200, 496, 463], "shape": "rect" }, { "name": "4", "coords": [505, 749, 672, 1013], "shape": "rect" }, { "name": "5", "coords": [506, 474, 668, 738], "shape": "rect" }, { "name": "6", "coords": [507, 200, 668, 461], "shape": "rect" }, { "name": "7", "coords": [676, 748, 840, 1010], "shape": "rect" }, { "name": "8", "coords": [682, 474, 838, 735], "shape": "rect" }, { "name": "9", "coords": [681, 201, 840, 461], "shape": "rect" }, { "name": "10", "coords": [852, 749, 1015, 1008], "shape": "rect" }, { "name": "11", "coords": [852, 473, 1017, 735], "shape": "rect" }, { "name": "12", "coords": [853, 202, 1017, 462], "shape": "rect" }, { "name": "13", "coords": [1026, 750, 1192, 1007], "shape": "rect" }, { "name": "14", "coords": [1025, 475, 1191, 735], "shape": "rect" }, { "name": "15", "coords": [1026, 199, 1193, 462], "shape": "rect" }, { "name": "16", "coords": [1207, 750, 1369, 1006], "shape": "rect" }, { "name": "17", "coords": [1203, 477, 1370, 737], "shape": "rect" }, { "name": "18", "coords": [1203, 200, 1370, 460], "shape": "rect" }, { "name": "19", "coords": [1383, 749, 1550, 1007], "shape": "rect" }, { "name": "20", "coords": [1382, 477, 1549, 736], "shape": "rect" }, { "name": "21", "coords": [1381, 202, 1549, 462], "shape": "rect" }, { "name": "22", "coords": [1561, 749, 1733, 1006], "shape": "rect" }, { "name": "23", "coords": [1561, 476, 1731, 735], "shape": "rect" }, { "name": "24", "coords": [1562, 199, 1730, 462], "shape": "rect" }, { "name": "25", "coords": [1745, 749, 1913, 1008], "shape": "rect" }, { "name": "26", "coords": [1741, 476, 1912, 735], "shape": "rect" }, { "name": "27", "coords": [1742, 198, 1912, 461], "shape": "rect" }, { "name": "28", "coords": [1925, 750, 2097, 1010], "shape": "rect" }, { "name": "29", "coords": [1922, 473, 2095, 735], "shape": "rect" }, { "name": "30", "coords": [1929, 200, 2099, 460], "shape": "rect" }, { "name": "31", "coords": [2109, 750, 2281, 1008], "shape": "rect" }, { "name": "32", "coords": [2109, 478, 2279, 734], "shape": "rect" }, { "name": "33", "coords": [2108, 199, 2279, 461], "shape": "rect" }, { "name": "34", "coords": [2293, 751, 2462, 1009], "shape": "rect" }, { "name": "35", "coords": [2291, 475, 2461, 735], "shape": "rect" }, { "name": "36", "coords": [2291, 202, 2461, 462], "shape": "rect" }, { "name": "Column 1 2 to 1", "coords": [2475, 748, 2633, 1008], "shape": "rect" }, { "name": "Column 2 2 to 1", "coords": [2472, 473, 2634, 739], "shape": "rect" }, { "name": "Column 3 2 to 1", "coords": [2473, 200, 2635, 461], "shape": "rect" }, { "name": "1st 12", "coords": [336, 1021, 1016, 1197], "shape": "rect" }, { "name": "2nd 12", "coords": [1028, 1019, 1731, 1198], "shape": "rect" }, { "name": "3rd 12", "coords": [1743, 1021, 2464, 1198], "shape": "rect" }, { "name": "Odd", "coords": [1744, 1208, 2084, 1387], "shape": "rect" }, { "name": "Even", "coords": [679, 1208, 1016, 1388], "shape": "rect" }, { "name": "Blue", "coords": [1381, 1211, 1726, 1388], "shape": "rect" }, { "name": "Silver", "coords": [1026, 1211, 1371, 1387], "shape": "rect" }, { "name": "1-18", "coords": [337, 1211, 667, 1387], "shape": "rect" }, { "name": "19-36", "coords": [2098, 1210, 2462, 1387], "shape": "rect" }];
+        const WHEEL_MAP = [{ "name": "0", "coords": [953, 120, 965, 306, 1086, 310, 1102, 120], "shape": "poly" }, { "name": "32", "coords": [1105, 120, 1252, 149, 1204, 329, 1090, 309], "shape": "poly" }, { "name": "15", "coords": [1256, 149, 1401, 198, 1322, 371, 1203, 329], "shape": "poly" }, { "name": "19", "coords": [1404, 199, 1533, 274, 1428, 429, 1322, 371], "shape": "poly" }, { "name": "4", "coords": [1539, 272, 1654, 365, 1521, 509, 1427, 434], "shape": "poly" }, { "name": "21", "coords": [1656, 370, 1757, 485, 1599, 597, 1524, 509], "shape": "poly" }, { "name": "2", "coords": [1758, 487, 1837, 615, 1667, 703, 1601, 599], "shape": "poly" }, { "name": "25", "coords": [1837, 617, 1893, 757, 1713, 812, 1668, 704], "shape": "poly" }, { "name": "17", "coords": [1710, 812, 1897, 757, 1929, 915, 1736, 936], "shape": "poly" }, { "name": "34", "coords": [1928, 912, 1932, 1066, 1739, 1055, 1736, 938], "shape": "poly" }, { "name": "6", "coords": [1739, 1055, 1931, 1066, 1912, 1214, 1728, 1171], "shape": "poly" }, { "name": "27", "coords": [1726, 1178, 1911, 1218, 1867, 1361, 1692, 1292], "shape": "poly" }, { "name": "13", "coords": [1863, 1366, 1799, 1500, 1636, 1401, 1688, 1293], "shape": "poly" }, { "name": "36", "coords": [1633, 1403, 1796, 1501, 1706, 1622, 1568, 1496], "shape": "poly" }, { "name": "11", "coords": [1559, 1499, 1704, 1627, 1598, 1729, 1477, 1581], "shape": "poly" }, { "name": "30", "coords": [1470, 1585, 1593, 1731, 1467, 1818, 1376, 1649], "shape": "poly" }, { "name": "8", "coords": [1372, 1653, 1465, 1819, 1328, 1880, 1265, 1699], "shape": "poly" }, { "name": "23", "coords": [1260, 1701, 1325, 1885, 1179, 1918, 1147, 1729], "shape": "poly" }, { "name": "10", "coords": [1147, 1729, 1177, 1919, 1027, 1927, 1024, 1738], "shape": "poly" }, { "name": "5", "coords": [1020, 1741, 1022, 1929, 873, 1915, 906, 1731], "shape": "poly" }, { "name": "24", "coords": [904, 1729, 867, 1915, 723, 1875, 787, 1700], "shape": "poly" }, { "name": "16", "coords": [780, 1699, 719, 1878, 586, 1816, 680, 1651], "shape": "poly" }, { "name": "33", "coords": [670, 1647, 581, 1818, 455, 1729, 575, 1581], "shape": "poly" }, { "name": "1", "coords": [573, 1581, 452, 1727, 347, 1626, 486, 1501], "shape": "poly" }, { "name": "20", "coords": [486, 1494, 344, 1621, 253, 1501, 415, 1402], "shape": "poly" }, { "name": "14", "coords": [410, 1400, 360, 1295, 187, 1365, 253, 1499], "shape": "poly" }, { "name": "31", "coords": [358, 1292, 322, 1178, 138, 1215, 184, 1362], "shape": "poly" }, { "name": "9", "coords": [322, 1172, 308, 1058, 118, 1067, 136, 1217], "shape": "poly" }, { "name": "22", "coords": [308, 1054, 313, 937, 122, 912, 116, 1060], "shape": "poly" }, { "name": "18", "coords": [314, 934, 336, 812, 156, 763, 124, 909], "shape": "poly" }, { "name": "29", "coords": [336, 814, 385, 705, 214, 617, 156, 757], "shape": "poly" }, { "name": "7", "coords": [384, 698, 447, 598, 293, 488, 216, 613], "shape": "poly" }, { "name": "28", "coords": [446, 597, 528, 509, 398, 370, 296, 483], "shape": "poly" }, { "name": "12", "coords": [516, 272, 620, 432, 531, 505, 401, 367], "shape": "poly" }, { "name": "35", "coords": [624, 429, 731, 370, 652, 195, 522, 269], "shape": "poly" }, { "name": "3", "coords": [731, 369, 844, 330, 795, 148, 654, 195], "shape": "poly" }, { "name": "26", "coords": [802, 145, 947, 120, 963, 309, 847, 329], "shape": "poly" }];
+
+    </script>
+
+    <script>
+        // Color mapping definitions
+        const SILVER_NUMBERS = [1, 3, 5, 7, 8, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+        const BLUE_NUMBERS = [2, 4, 6, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35];
+
+        // Wheel layout numbers in clockwise order starting from 0
+        const WHEEL_NUMBERS_ORDER = [
+            0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26
+        ];
+
+        // Centroids and metadata variables computed at load time
+        let boardCentroids = {};
+        let wheelCentroids = {};
+
+        // Game states
+        let players = [];
+        let currentPlayerIndex = 0; // Index of the human player or active player
+        let currentBettingMode = 'low'; // low or high
+        let selectedChipValue = 5; // default chip value
+        let gameStage = 'setup'; // 'setup', 'betting', 'spinning', 'gameover'
+        let currentWheelAngle = 0; // Tracker of current wheel visual rotation
+
+        let isMusicPlaying = false;
+
+        // Background music toggle
+        function toggleAudio() {
+            const audio = document.getElementById('bg-music');
+            const btn = document.getElementById('btn-audio');
+            if (!audio || !btn) return;
+            if (isMusicPlaying) {
+                audio.pause();
+                btn.innerText = '🎵 Play Music';
+                isMusicPlaying = false;
+            } else {
+                audio.play().then(() => {
+                    btn.innerText = '🔇 Mute Music';
+                    isMusicPlaying = true;
+                }).catch(err => {
+                    console.log("Audio play failed:", err);
+                    alert("Please click anywhere on the page first, then try enabling music again!");
+                });
+            }
+        }
+
+        // Routing Helper
+        function switchGamePage(game) {
+            if (game === 'blackjack') {
+                window.location.href = 'index.html';
+            } else if (game === 'holdem') {
+                window.location.href = 'holdem.html';
+            } else if (game === 'slots') {
+                window.location.href = 'slots.html';
+            } else if (game === 'ceelo') {
+                window.location.href = 'dice.html';
+            } else if (game === 'targetshooter') {
+                window.location.href = 'targetshooter/targetshooter.html';
+            } else if (game === 'roulette') {
+                window.location.href = 'roulette.html';
+            }
+        }
+
+        function togglePlayerSetup() {
+            const mode = document.getElementById('mode-select').value;
+            document.getElementById('p2-config').classList.toggle('hidden', mode === '1');
+            document.getElementById('p3-config').classList.toggle('hidden', mode === '1');
+        }
+
+        // Compute centroids on load
+        function computeCentroids() {
+            // Board map centroids
+            BOARD_MAP.forEach(area => {
+                const coords = area.coords;
+                let cx = 0, cy = 0;
+                if (area.shape === 'rect') {
+                    cx = (coords[0] + coords[2]) / 2;
+                    cy = (coords[1] + coords[3]) / 2;
+                } else {
+                    const n = coords.length / 2;
+                    let sumX = 0, sumY = 0;
+                    for (let i = 0; i < n; i++) {
+                        sumX += coords[i * 2];
+                        sumY += coords[i * 2 + 1];
+                    }
+                    cx = sumX / n;
+                    cy = sumY / n;
+                }
+                boardCentroids[area.name] = { cx, cy };
+            });
+
+            // Wheel map centroids and angles
+            WHEEL_MAP.forEach(area => {
+                const coords = area.coords;
+                const n = coords.length / 2;
+                let sumX = 0, sumY = 0;
+                for (let i = 0; i < n; i++) {
+                    sumX += coords[i * 2];
+                    sumY += coords[i * 2 + 1];
+                }
+                const cx = sumX / n;
+                const cy = sumY / n;
+
+                let angle = Math.atan2(cy - 1024, cx - 1024) * 180 / Math.PI;
+                angle = (angle + 360) % 360;
+
+                const dist = Math.sqrt((cx - 1024) ** 2 + (cy - 1024) ** 2);
+                wheelCentroids[area.name] = { cx, cy, angle, dist };
+            });
+        }
+
+        // Hit testing helpers
+        function isPointInRect(x, y, coords) {
+            return x >= coords[0] && x <= coords[2] && y >= coords[1] && y <= coords[3];
+        }
+
+        function isPointInPolygon(x, y, coords) {
+            let inside = false;
+            const n = coords.length / 2;
+            for (let i = 0, j = n - 1; i < n; j = i++) {
+                const xi = coords[i * 2], yi = coords[i * 2 + 1];
+                const xj = coords[j * 2], yj = coords[j * 2 + 1];
+                const intersect = ((yi > y) !== (yj > y))
+                    && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        // Get board element click mapping back to 2k landscape coordinates (no rotation needed since BOARD_MAP is pre-rotated)
+        function translateCoordinates(clientX, clientY, rect) {
+            const boardW = rect.width;
+            const boardH = rect.height;
+
+            const x_2k = clientX * (2752 / boardW);
+            const y_2k = clientY * (1536 / boardH);
+
+            return { x_2k, y_2k };
+        }
+
+        // Find board area at translated coordinates
+        function findBoardArea(x_2k, y_2k) {
+            for (let area of BOARD_MAP) {
+                if (area.shape === 'rect') {
+                    if (isPointInRect(x_2k, y_2k, area.coords)) return area;
+                } else if (area.shape === 'poly') {
+                    if (isPointInPolygon(x_2k, y_2k, area.coords)) return area;
+                }
+            }
+            return null;
+        }
+
+        // Map landscape centroid coordinates back to screen relative positions on landscape board container
+        function mapCentroidToScreen(name, boardW, boardH) {
+            const centroid = boardCentroids[name];
+            if (!centroid) return null;
+
+            const cx_l = centroid.cx;
+            const cy_l = centroid.cy;
+
+            // Scale directly to screen board container size
+            const sx = cx_l * (boardW / 2752);
+            const sy = cy_l * (boardH / 1536);
+
+            return { x: sx, y: sy };
+        }
+
+        // Responsive Resizing Viewport
+        function resizeTable() {
+            const viewport = document.getElementById('roulette-table-viewport');
+            const board = document.getElementById('roulette-table-board');
+            if (!viewport || !board) return;
+            const viewWidth = viewport.clientWidth;
+            if (viewWidth === 0) return;
+            const scale = viewWidth / 2752;
+            board.style.transform = `scale(${scale})`;
+
+            // Redraw chips if game screen is visible
+            if (gameStage !== 'setup') {
+                renderAllBetsChips();
+            }
+        }
+        window.addEventListener('resize', resizeTable);
+        window.addEventListener('load', () => {
+            computeCentroids();
+            resizeTable();
+            const viewport = document.getElementById('roulette-table-viewport');
+            const board = document.getElementById('roulette-table-board');
+            if (viewport && board && typeof ResizeObserver !== 'undefined') {
+                const rObserver = new ResizeObserver(entries => {
+                    for (let entry of entries) {
+                        const w = entry.contentRect.width;
+                        if (w === 0) continue;
+                        const s = w / 2752;
+                        board.style.transform = `scale(${s})`;
+                        if (gameStage !== 'setup') {
+                            renderAllBetsChips();
+                        }
+                    }
+                });
+                rObserver.observe(viewport);
+            }
+        });
+
+        // Initialize setup
+        function startGame() {
+            currentBettingMode = document.getElementById('betting-mode').value;
+            const startCash = CasinoSaveManager.getBankroll();
+            const count = parseInt(document.getElementById('mode-select').value);
+
+            players = [];
+            for (let i = 1; i <= count; i++) {
+                const type = document.getElementById(`p${i}-type`).value;
+                players.push({
+                    id: i,
+                    name: `Player ${i} (${type.toUpperCase()})`,
+                    type: type,
+                    hand: [],
+                    status: 'betting',
+                    bankroll: i === 1 ? startCash : (currentBettingMode === 'high' ? 1000 : 200),
+                    currentBet: 0,
+                    bets: {}
+                });
+            }
+
+            // Set appropriate chip selector values based on low/high roller
+            if (currentBettingMode === 'high') {
+                document.getElementById('chip-5').src = 'silvercoin.png';
+                document.getElementById('chip-5').alt = 'Silver Chip ($50)';
+                document.getElementById('chip-25').src = 'goldcoin.png';
+                document.getElementById('chip-25').alt = 'Gold Chip ($100)';
+                document.getElementById('chip-100').src = 'goldcoin.png';
+                document.getElementById('chip-100').alt = 'Mega Gold Chip ($500)';
+
+                selectedChipValue = 50;
+                document.getElementById('chip-selectors').innerHTML = `
+                    <img src="silvercoin.png" class="chip-option selected-chip" id="chip-50" onclick="selectChip(50)" alt="Silver Chip ($50)">
+                    <img src="goldcoin.png" class="chip-option" id="chip-100" onclick="selectChip(100)" alt="Gold Chip ($100)">
+                    <img src="goldcoin.png" class="chip-option" id="chip-500" onclick="selectChip(500)" alt="Mega Gold Chip ($500)" style="filter: hue-rotate(90deg) drop-shadow(2px 4px 4px rgba(0,0,0,0.5));">
+                `;
+            } else {
+                selectedChipValue = 5;
+            }
+
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'flex';
+
+            setDealerExpression('neutral');
+            startNextRound();
+            setTimeout(resizeTable, 50); // Ensure table is resized after showing
+        }
+
+        function startNextRound() {
+            gameStage = 'betting';
+            document.getElementById('btn-spin').disabled = false;
+            document.getElementById('btn-clear').disabled = false;
+            document.getElementById('btn-next-round').classList.add('hidden');
+            document.getElementById('btn-quit').disabled = false;
+
+            // Reset bets and setup visual board
+            players.forEach(p => {
+                p.bets = {};
+                p.currentBet = 0;
+            });
+
+            // Hide ball initially
+            document.getElementById('roulette-ball-img').classList.add('hidden');
+
+            setDealerExpression('neutral');
+            showMessage("Place your bets on the board!");
+            updateUI();
+        }
+
+        // Chip selection
+        function selectChip(val) {
+            selectedChipValue = val;
+            const chips = document.querySelectorAll('.chip-option');
+            chips.forEach(c => c.classList.remove('selected-chip'));
+
+            const selected = document.getElementById(`chip-${val}`);
+            if (selected) selected.classList.add('selected-chip');
+        }
+
+        // Clear bets
+        function clearBets() {
+            if (gameStage !== 'betting') return;
+            const primary = getPrimaryPlayer();
+            primary.bets = {};
+            primary.currentBet = 0;
+            updateUI();
+        }
+
+        // Get primary player (usually Player 1 Human)
+        function getPrimaryPlayer() {
+            return players.find(p => p.type === 'human') || players[0];
+        }
+
+        // Message display helper
+        function showMessage(msg) {
+            document.getElementById('status-area').innerHTML = msg;
+        }
+
+        // Update information displays
+        function updateUI() {
+            const bar = document.getElementById('players-info-bar');
+            bar.innerHTML = '';
+
+            players.forEach((p, idx) => {
+                const isActive = (idx === 0 && gameStage === 'betting'); // human active turn highlight
+                bar.innerHTML += `
+                    <div class="player-info-card ${isActive ? 'active-player-card' : ''}">
+                        <div class="player-info-title">${p.name}</div>
+                        <div class="player-info-bankroll">Bankroll: $${p.bankroll}</div>
+                        <div class="player-info-bet">Total Bet: $${p.currentBet}</div>
+                    </div>
+                `;
+            });
+
+            renderAllBetsChips();
+        }
+
+        // Betting click handler
+        function onBoardClick(event) {
+            if (gameStage !== 'betting') return;
+
+            const primary = getPrimaryPlayer();
+            if (primary.type !== 'human') return;
+
+            const container = document.getElementById('roulette-board-container');
+            const rect = container.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const clickY = event.clientY - rect.top;
+
+            const { x_2k, y_2k } = translateCoordinates(clickX, clickY, rect);
+            const area = findBoardArea(x_2k, y_2k);
+
+            if (area) {
+                const maxBet = currentBettingMode === 'high' ? 1000 : 100;
+
+                if (primary.currentBet + selectedChipValue > primary.bankroll) {
+                    showMessage("Not enough bankroll to place this bet!");
+                    return;
+                }
+
+                if (primary.currentBet + selectedChipValue > maxBet) {
+                    showMessage(`Maximum table bet limit is $${maxBet}!`);
+                    return;
+                }
+
+                // Place the bet
+                if (!primary.bets[area.name]) primary.bets[area.name] = 0;
+                primary.bets[area.name] += selectedChipValue;
+                primary.currentBet += selectedChipValue;
+
+                updateUI();
+            }
+        }
+
+        // Hover highlighting on board
+        function onBoardHover(event) {
+            if (gameStage !== 'betting') return;
+            const container = document.getElementById('roulette-board-container');
+            const rect = container.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const clickY = event.clientY - rect.top;
+
+            const { x_2k, y_2k } = translateCoordinates(clickX, clickY, rect);
+            const area = findBoardArea(x_2k, y_2k);
+            const hl = document.getElementById('board-highlight');
+
+            if (area) {
+                // Use local unscaled coordinates (2698, 1512) since CSS transform scales the container automatically
+                const localPos = mapCentroidToScreen(area.name, 2698, 1512);
+                if (localPos) {
+                    hl.style.display = 'block';
+
+                    let w_local, h_local;
+                    if (area.shape === 'rect') {
+                        const coords = area.coords;
+                        w_local = (coords[2] - coords[0]) * (2698 / 2752);
+                        h_local = (coords[3] - coords[1]) * (1512 / 1536);
+                    } else {
+                        w_local = 120;
+                        h_local = 60;
+                    }
+
+                    hl.style.width = `${w_local}px`;
+                    hl.style.height = `${h_local}px`;
+                    hl.style.left = `${localPos.x - w_local / 2}px`;
+                    hl.style.top = `${localPos.y - h_local / 2}px`;
+                }
+            } else {
+                hl.style.display = 'none';
+            }
+        }
+
+        function onBoardLeave() {
+            document.getElementById('board-highlight').style.display = 'none';
+        }
+
+        // Rendering coin/chip stacks on the board
+        function renderAllBetsChips() {
+            const container = document.getElementById('roulette-board-container');
+            const layer = document.getElementById('chips-layer');
+            if (!container || !layer) return;
+
+            layer.innerHTML = '';
+
+            players.forEach((p, pIdx) => {
+                for (let areaName in p.bets) {
+                    const amount = p.bets[areaName];
+                    if (amount <= 0) continue;
+
+                    const basePos = mapCentroidToScreen(areaName, 2698, 1512);
+                    if (!basePos) continue;
+
+                    let offsetScale = 40;
+                    let ox = 0, oy = 0;
+                    if (players.length > 1) {
+                        if (pIdx === 0) {
+                            ox = 0; oy = 0;
+                        } else if (pIdx === 1) {
+                            ox = -offsetScale; oy = -offsetScale;
+                        } else if (pIdx === 2) {
+                            ox = offsetScale; oy = offsetScale;
+                        }
+                    }
+
+                    let coinsHTML = '';
+                    let remaining = amount;
+
+                    let gold, silver, copper;
+                    if (currentBettingMode === 'high') {
+                        gold = Math.floor(remaining / 500); remaining %= 500;
+                        silver = Math.floor(remaining / 100); remaining %= 100;
+                        copper = Math.ceil(remaining / 50);
+                    } else {
+                        gold = Math.floor(remaining / 100); remaining %= 100;
+                        silver = Math.floor(remaining / 25); remaining %= 25;
+                        copper = Math.ceil(remaining / 5);
+                    }
+
+                    let stackIndex = 0;
+                    const addChips = (count, imgName, hueShift = 0) => {
+                        for (let k = 0; k < count; k++) {
+                            const style = `bottom: ${stackIndex * 6}px; z-index: ${stackIndex}; ${hueShift ? 'filter: hue-rotate(' + hueShift + 'deg);' : ''}`;
+                            coinsHTML += `<img src="${imgName}" class="coin-image" style="${style}">`;
+                            stackIndex++;
+                        }
+                    };
+
+                    addChips(gold, 'goldcoin.png', currentBettingMode === 'high' ? 90 : 0);
+                    addChips(silver, 'silvercoin.png');
+                    addChips(copper, 'coppercoin.png');
+
+                    const percentX = ((basePos.x + ox) / 2698) * 100;
+                    const percentY = ((basePos.y + oy) / 1512) * 100;
+
+                    layer.innerHTML += `
+                        <div class="board-chip-stack" style="left: ${percentX}%; top: ${percentY}%;">
+                            ${coinsHTML}
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        // Automated AI Betting Strategy
+        function placeAIBets() {
+            players.forEach((p, idx) => {
+                if (p.type !== 'ai') return;
+                p.bets = {};
+                p.currentBet = 0;
+
+                if (p.bankroll <= 0) return;
+
+                const maxBet = currentBettingMode === 'high' ? 1000 : 100;
+                const numBets = Math.floor(Math.random() * 3) + 1;
+                const possibleBets = [];
+
+                possibleBets.push("Blue", "Silver", "Even", "Odd", "1-18", "19-36");
+                possibleBets.push("1st 12", "2nd 12", "3rd 12");
+                possibleBets.push("Column 1 2 to 1", "Column 2 2 to 1", "Column 3 2 to 1");
+                for (let n = 0; n <= 36; n++) {
+                    possibleBets.push(n.toString());
+                }
+
+                let aiBankroll = p.bankroll;
+                for (let k = 0; k < numBets; k++) {
+                    const chipVal = currentBettingMode === 'high' ? (Math.random() < 0.5 ? 50 : 100) : (Math.random() < 0.5 ? 5 : 25);
+                    if (p.currentBet + chipVal > aiBankroll || p.currentBet + chipVal > maxBet) break;
+
+                    const pick = possibleBets[Math.floor(Math.random() * possibleBets.length)];
+                    if (!p.bets[pick]) p.bets[pick] = 0;
+                    p.bets[pick] += chipVal;
+                    p.currentBet += chipVal;
+                }
+            });
+        }
+
+        // Spin the wheel and animate ball
+        function spinWheel() {
+            if (gameStage !== 'betting') return;
+
+            const primary = getPrimaryPlayer();
+            if (primary.type === 'human' && primary.currentBet === 0) {
+                showMessage("Please place a bet on the board first!");
+                return;
+            }
+
+            gameStage = 'spinning';
+            document.getElementById('btn-spin').disabled = true;
+            document.getElementById('btn-clear').disabled = true;
+            document.getElementById('btn-quit').disabled = true;
+
+            placeAIBets();
+            updateUI();
+
+            players.forEach(p => {
+                p.bankroll -= p.currentBet;
+            });
+
+            const primary = getPrimaryPlayer();
+            if (primary.type === 'human' && primary.currentBet > 0) {
+                CasinoSaveManager.addTransaction("roulette", primary.currentBet, "bet", -primary.currentBet, {
+                    bets: Object.assign({}, primary.bets),
+                    note: `Bet placed: $${primary.currentBet}`
+                });
+            }
+
+            updateUI();
+
+            const winningNumber = WHEEL_NUMBERS_ORDER[Math.floor(Math.random() * WHEEL_NUMBERS_ORDER.length)];
+            const pocket = wheelCentroids[winningNumber.toString()];
+
+            const targetWheelSpins = 5;
+            const targetWheelAngle = 360 * targetWheelSpins + 270 - pocket.angle;
+
+            const ballImg = document.getElementById('roulette-ball-img');
+            const wheelImg = document.getElementById('roulette-wheel-img');
+            ballImg.classList.remove('hidden');
+
+            const duration = 4500;
+            const startTime = performance.now();
+            const startWheelAngle = currentWheelAngle % 360;
+
+            function animate(now) {
+                const elapsed = now - startTime;
+                const t = Math.min(elapsed / duration, 1);
+                const easeOut = 1 - Math.pow(1 - t, 3);
+                const wheelAngle = startWheelAngle + (targetWheelAngle - startWheelAngle) * easeOut;
+                wheelImg.style.transform = `rotate(${wheelAngle}deg)`;
+
+                if (t < 0.75) {
+                    const ballSpins = -7;
+                    const ballAngle = (ballSpins * 360) * easeOut;
+                    const trackRadius = 490;
+
+                    const bx = 556 + trackRadius * Math.cos(ballAngle * Math.PI / 180) - 31;
+                    const by = 556 + trackRadius * Math.sin(ballAngle * Math.PI / 180) - 31;
+
+                    ballImg.style.left = `${bx}px`;
+                    ballImg.style.top = `${by}px`;
+                    ballImg.style.transform = 'none';
+                } else {
+                    const wheelScaledCentroidX = pocket.cx * (1112 / 2048);
+                    const wheelScaledCentroidY = pocket.cy * (1112 / 2048);
+
+                    const dx = 556 - wheelScaledCentroidX;
+                    const dy = 556 - wheelScaledCentroidY;
+                    const len = Math.sqrt(dx * dx + dy * dy);
+                    const shift = 5.4;
+                    const bx = wheelScaledCentroidX + (dx / len) * shift - 31;
+                    const by = wheelScaledCentroidY + (dy / len) * shift - 31;
+
+                    ballImg.style.left = `${bx}px`;
+                    ballImg.style.top = `${by}px`;
+
+                    ballImg.style.transformOrigin = `${556 - bx}px ${556 - by}px`;
+                    ballImg.style.transform = `rotate(${wheelAngle}deg)`;
+                }
+
+                if (t < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    currentWheelAngle = wheelAngle;
+                    resolvePayouts(winningNumber);
+                }
+            }
+
+            showMessage("Dealer Clare is spinning the wheel...");
+            requestAnimationFrame(animate);
+        }
+
+        // Payouts calculations
+        function resolvePayouts(winningNum) {
+            gameStage = 'gameover';
+
+            const winColor = getNumberColor(winningNum);
+            const displayColor = winningNum === 0 ? "BLUE/HOUSE" : winColor.toUpperCase();
+
+            showMessage(`Wheel stopped on: <strong>${winningNum} ${displayColor}</strong>`);
+
+            players.forEach(p => {
+                if (p.bankroll <= 0 && p.currentBet === 0) return;
+                let wonAmount = 0;
+
+                for (let areaName in p.bets) {
+                    const amount = p.bets[areaName];
+                    let betWon = false;
+                    let payoutRatio = 0;
+
+                    if (areaName === winningNum.toString()) {
+                        betWon = true;
+                        payoutRatio = 35;
+                    } else if (areaName === 'Even' && winningNum !== 0 && winningNum % 2 === 0) {
+                        betWon = true;
+                        payoutRatio = 1;
+                    } else if (areaName === 'Odd' && winningNum !== 0 && winningNum % 2 !== 0) {
+                        betWon = true;
+                        payoutRatio = 1;
+                    } else if (areaName === 'Blue' && winningNum !== 0 && BLUE_NUMBERS.includes(winningNum)) {
+                        betWon = true;
+                        payoutRatio = 1;
+                    } else if (areaName === 'Silver' && winningNum !== 0 && SILVER_NUMBERS.includes(winningNum)) {
+                        betWon = true;
+                        payoutRatio = 1;
+                    } else if (areaName === '1-18' && winningNum >= 1 && winningNum <= 18) {
+                        betWon = true;
+                        payoutRatio = 1;
+                    } else if (areaName === '19-36' && winningNum >= 19 && winningNum <= 36) {
+                        betWon = true;
+                        payoutRatio = 1;
+                    } else if (areaName === '1st 12' && winningNum >= 1 && winningNum <= 12) {
+                        betWon = true;
+                        payoutRatio = 2;
+                    } else if (areaName === '2nd 12' && winningNum >= 13 && winningNum <= 24) {
+                        betWon = true;
+                        payoutRatio = 2;
+                    } else if (areaName === '3rd 12' && winningNum >= 25 && winningNum <= 36) {
+                        betWon = true;
+                        payoutRatio = 2;
+                    } else if (areaName === 'Column 1 2 to 1' && winningNum !== 0 && winningNum % 3 === 1) {
+                        betWon = true;
+                        payoutRatio = 2;
+                    } else if (areaName === 'Column 2 2 to 1' && winningNum !== 0 && winningNum % 3 === 2) {
+                        betWon = true;
+                        payoutRatio = 2;
+                    } else if (areaName === 'Column 3 2 to 1' && winningNum !== 0 && winningNum % 3 === 0) {
+                        betWon = true;
+                        payoutRatio = 2;
+                    }
+
+                    if (betWon) {
+                        wonAmount += amount + (amount * payoutRatio);
+                    }
+                }
+
+                p.bankroll += wonAmount;
+
+                if (p.id === 1 && p.type === 'human') {
+                    CasinoSaveManager.addTransaction("roulette", p.currentBet, p.bankroll > 0 ? "win" : "lose", wonAmount, {
+                        winningNumber: winningNum,
+                        winningColor: displayColor,
+                        bets: Object.assign({}, p.bets),
+                        note: wonAmount > 0 ? `Won $${wonAmount}` : `Lost bet`
+                    });
+                }
+            });
+
+            // Evaluate reaction based on human player result
+            const primary = getPrimaryPlayer();
+            const netChange = wonAmountForPlayer(primary) - primary.currentBet;
+
+            if (netChange > 0) {
+                setDealerExpression('win');
+                showMessage(`Wheel stopped on: <strong>${winningNum} ${displayColor}</strong>. You won $${netChange}!`);
+            } else if (netChange < 0) {
+                setDealerExpression('loss');
+                showMessage(`Wheel stopped on: <strong>${winningNum} ${displayColor}</strong>. You lost $${Math.abs(netChange)}!`);
+            } else {
+                setDealerExpression('neutral');
+                if (primary.currentBet > 0) {
+                    showMessage(`Wheel stopped on: <strong>${winningNum} ${displayColor}</strong>. Push (No win/loss).`);
+                }
+            }
+
+            document.getElementById('btn-spin').disabled = true;
+            document.getElementById('btn-clear').disabled = true;
+            document.getElementById('btn-next-round').classList.remove('hidden');
+            document.getElementById('btn-quit').disabled = false;
+
+            updateUI();
+        }
+
+        function wonAmountForPlayer(p) {
+            let wonAmount = 0;
+            const winningNum = getWinningNumberFromState();
+            if (winningNum === null) return 0;
+
+            for (let areaName in p.bets) {
+                const amount = p.bets[areaName];
+                let betWon = false;
+                let payoutRatio = 0;
+
+                if (areaName === winningNum.toString()) {
+                    betWon = true;
+                    payoutRatio = 35;
+                } else if (areaName === 'Even' && winningNum !== 0 && winningNum % 2 === 0) {
+                    betWon = true;
+                    payoutRatio = 1;
+                } else if (areaName === 'Odd' && winningNum !== 0 && winningNum % 2 !== 0) {
+                    betWon = true;
+                    payoutRatio = 1;
+                } else if (areaName === 'Blue' && winningNum !== 0 && BLUE_NUMBERS.includes(winningNum)) {
+                    betWon = true;
+                    payoutRatio = 1;
+                } else if (areaName === 'Silver' && winningNum !== 0 && SILVER_NUMBERS.includes(winningNum)) {
+                    betWon = true;
+                    payoutRatio = 1;
+                } else if (areaName === '1-18' && winningNum >= 1 && winningNum <= 18) {
+                    betWon = true;
+                    payoutRatio = 1;
+                } else if (areaName === '19-36' && winningNum >= 19 && winningNum <= 36) {
+                    betWon = true;
+                    payoutRatio = 1;
+                } else if (areaName === '1st 12' && winningNum >= 1 && winningNum <= 12) {
+                    betWon = true;
+                    payoutRatio = 2;
+                } else if (areaName === '2nd 12' && winningNum >= 13 && winningNum <= 24) {
+                    betWon = true;
+                    payoutRatio = 2;
+                } else if (areaName === '3rd 12' && winningNum >= 25 && winningNum <= 36) {
+                    betWon = true;
+                    payoutRatio = 2;
+                } else if (areaName === 'Column 1 2 to 1' && winningNum !== 0 && winningNum % 3 === 1) {
+                    betWon = true;
+                    payoutRatio = 2;
+                } else if (areaName === 'Column 2 2 to 1' && winningNum !== 0 && winningNum % 3 === 2) {
+                    betWon = true;
+                    payoutRatio = 2;
+                } else if (areaName === 'Column 3 2 to 1' && winningNum !== 0 && winningNum % 3 === 0) {
+                    betWon = true;
+                    payoutRatio = 2;
+                }
+
+                if (betWon) {
+                    wonAmount += amount + (amount * payoutRatio);
+                }
+            }
+            return wonAmount;
+        }
+
+        let lastWinningNum = null;
+        function getWinningNumberFromState() {
+            return lastWinningNum;
+        }
+
+        const originalResolvePayouts = resolvePayouts;
+        resolvePayouts = function (winningNum) {
+            lastWinningNum = winningNum;
+            originalResolvePayouts(winningNum);
+        };
+
+        function getNumberColor(num) {
+            if (num === 0) return 'blue';
+            if (BLUE_NUMBERS.includes(num)) return 'blue';
+            return 'silver';
+        }
+
+        function setDealerExpression(expression) {
+            const boardElem = document.getElementById('roulette-table-board');
+            if (!boardElem) return;
+
+            let filename = 'rouletteclare1.webp';
+            switch (expression) {
+                case 'win':
+                    filename = 'rouletteclare_win.webp';
+                    break;
+                case 'loss':
+                    filename = 'rouletteclare_loss1.webp';
+                    break;
+                case 'neutral':
+                default:
+                    filename = 'rouletteclare1.webp';
+                    break;
+            }
+
+            boardElem.style.backgroundImage = `url('roulette/${filename}')`;
+        }
+
+        function quitGame() {
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('setup-screen').style.display = 'flex';
+            setDealerExpression('neutral');
+            gameStage = 'setup';
+        }
+
+        // Save System Integration
+        window.openAdjustmentModal = function() {
+            document.getElementById('wallet-adjust-modal').style.display = 'flex';
+        };
+        window.closeAdjustmentModal = function() {
+            document.getElementById('wallet-adjust-modal').style.display = 'none';
+            document.getElementById('adjust-note').value = '';
+        };
+        window.submitAdjustment = function() {
+            const action = document.getElementById('adjust-action').value;
+            const amount = parseFloat(document.getElementById('adjust-amount').value);
+            const note = document.getElementById('adjust-note').value;
+            if (isNaN(amount) || amount <= 0) {
+                alert("Please enter a valid positive amount.");
+                return;
+            }
+            if (action === 'add') {
+                CasinoSaveManager.addFunds(amount, note || "Deposit buy-in");
+            } else {
+                const currentBalance = CasinoSaveManager.getBankroll();
+                if (amount > currentBalance) {
+                    alert("Cannot cash out more than your current wallet balance!");
+                    return;
+                }
+                CasinoSaveManager.cashOut(amount, note || "Cash-out withdrawal");
+            }
+            window.closeAdjustmentModal();
+        };
+        window.handleSaveImport = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                CasinoSaveManager.importSave(e.target.result, (err, newBalance) => {
+                    if (err) {
+                        alert("Error importing save: " + err.message);
+                    } else {
+                        alert("Session successfully imported! Balance: $" + newBalance);
+                    }
+                });
+            };
+            reader.readAsText(file);
+        };
+
+        function syncLocalBankroll(newBalance) {
+            if (players && players.length > 0) {
+                const human = players.find(p => p.type === 'human') || players[0];
+                if (human) {
+                    human.bankroll = newBalance;
+                }
+            }
+            updateUI();
+        }
+
+        // Initialize bankroll displays and subscribe to updates
+        window.addEventListener('load', () => {
+            const initialBalance = CasinoSaveManager.getBankroll();
+            const display = document.getElementById('session-bankroll-display');
+            if (display) display.innerText = '$' + initialBalance.toFixed(2);
+
+            CasinoSaveManager.onUpdate((newBalance) => {
+                const display = document.getElementById('session-bankroll-display');
+                if (display) display.innerText = '$' + newBalance.toFixed(2);
+                syncLocalBankroll(newBalance);
+            });
+        });
+    </script>
+</body>
+
+</html>

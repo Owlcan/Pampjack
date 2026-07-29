@@ -1,0 +1,16 @@
+- [x] Create `casinoSaveManager.js` containing save/load, ledger verification, transaction log, and cross-tab sync logic.
+- [x] Add the Bankroll Adjustment and Export/Import UI components to each game page:
+  - [x] Blackjack (`index.html`)
+  - [x] Texas Hold'em (`holdem.html`)
+  - [x] Roulette (`roulette.html`)
+  - [x] Slots (`slots.html`)
+  - [x] Cee-lo (`dice.html`)
+  - [x] Target Shooter (`targetshooter/targetshooter.html`)
+- [x] Integrate save/load/log logic into game scripts:
+  - [x] Blackjack (`index.html`)
+  - [x] Texas Hold'em (`holdem.html`)
+  - [x] Roulette (`roulette.html`)
+  - [x] Slots (`slots.html`)
+  - [x] Cee-lo (`dice.html`)
+  - [x] Target Shooter (`targetshooter/targetshooter.html`)
+- [/] Verify functionality (ledger replay, cross-tab syncing, session notes, target shooter high score).

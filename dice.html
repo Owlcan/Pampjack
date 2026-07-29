@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Cee-lo Dice Game - Vae's Table</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #d4af37;
+            --gold-light: #ffd700;
+            --wood-dark: #2a160b;
+            --wood-light: #4b2e1b;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #1a1a1a;
+            font-family: 'MedievalSharp', serif;
+            color: #fff;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(42, 22, 11, 0.9);
+            border: 3px solid var(--gold);
+            border-radius: 12px;
+            width: 340px;
+            max-height: 95vh;
+            overflow-y: auto;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-sizing: border-box;
+            scrollbar-width: thin;
+        }
+
+        button {
+            background: var(--wood-dark);
+            color: var(--gold-light);
+            border: 2px solid var(--gold);
+            padding: 10px;
+            margin-top: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            font-family: 'MedievalSharp', serif;
+            width: 100%;
+            transition: all 0.2s;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        button:hover:not(:disabled) {
+            background: var(--gold);
+            color: var(--wood-dark);
+        }
+
+        button:disabled {
+            background: #444;
+            border-color: #666;
+            color: #888;
+            cursor: not-allowed;
+            box-shadow: none;
+            opacity: 0.6;
+        }
+
+        .secondary-btn {
+            background: #1e88e5;
+            color: white;
+            border: 1px solid #1565c0;
+        }
+
+        .secondary-btn:hover:not(:disabled) {
+            background: #1565c0;
+        }
+
+        input[type="file"] {
+            margin-bottom: 5px;
+            font-size: 11px;
+            width: 100%;
+            color: #ccc;
+        }
+
+        .file-label {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 8px;
+            display: block;
+        }
+
+        #result {
+            margin-top: 10px;
+            font-size: 22px;
+            font-weight: bold;
+            color: #4CAF50;
+            text-align: center;
+        }
+
+        #mapList {
+            margin-top: 5px;
+            font-size: 12px;
+            color: #00bcd4;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .button-group button {
+            flex: 1;
+        }
+
+        /* Banker Vae Panel */
+        #dealer-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(42, 22, 11, 0.9);
+            border: 3px solid var(--gold);
+            border-radius: 12px;
+            width: 340px;
+            height: 640px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            box-sizing: border-box;
+        }
+
+        #dealer-avatar {
+            width: 100%;
+            height: 460px;
+            object-fit: contain;
+            border-bottom: 2px solid var(--gold);
+            margin-bottom: 12px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            transition: opacity 0.15s ease-in-out;
+        }
+
+        #dealer-name {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: var(--gold-light);
+            text-align: center;
+        }
+
+        #dealer-bubble {
+            font-size: 0.95rem;
+            color: #ddd;
+            text-align: center;
+            margin-top: 5px;
+            font-style: italic;
+            background: rgba(0,0,0,0.4);
+            padding: 6px 10px;
+            border-radius: 6px;
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.3;
+        }
+
+        /* Chips selectors */
+        .chip-selector-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 8px;
+            border-radius: 30px;
+            border: 1px solid var(--gold);
+            margin: 5px 0;
+        }
+
+        .chip-option {
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: transform 0.2s, border-color 0.2s;
+            border: 3px solid transparent;
+            filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.5));
+        }
+
+        .chip-option:hover {
+            transform: scale(1.1);
+        }
+
+        .chip-option.selected-chip {
+            border-color: var(--gold-light);
+            transform: scale(1.1);
+        }
+
+        /* Collapsible Sections */
+        .collapsible-header {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--gold);
+            color: var(--gold-light);
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 0.95rem;
+            margin-top: 5px;
+            user-select: none;
+        }
+
+        .collapsible-header:hover {
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        .collapsible-content {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid #444;
+            border-top: none;
+            padding: 10px;
+            border-radius: 0 0 5px 5px;
+        }
+
+        .collapsible-content.expanded {
+            display: flex;
+        }
+
+        /* Info Display Card */
+        .info-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--gold);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .info-card h4 {
+            margin: 0 0 5px 0;
+            color: var(--gold-light);
+            font-size: 0.95rem;
+        }
+
+        .info-card p {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: bold;
+        }
+
+        /* History items in collapsible */
+        .history-list-embed {
+            max-height: 150px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+
+        .history-item-embed {
+            border-bottom: 1px solid #333;
+            padding: 6px 0;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .history-item-embed:last-child {
+            border-bottom: none;
+        }
+
+    <script src="casinoSaveManager.js"></script>
+</head>
+
+<body>
+    <div id="ui">
+        <!-- Save & Session Widget -->
+        <div id="save-session-bar" style="background: rgba(0, 0, 0, 0.4); border: 2px solid var(--gold); border-radius: 8px; padding: 10px; margin-bottom: 12px; box-sizing: border-box;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 0.95rem; color: var(--gold-light); font-weight: bold;">WALLET:</span>
+                <span id="session-bankroll-display" style="font-size: 1.1rem; color: #fff; font-family: monospace; font-weight: bold; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--gold);">$200.00</span>
+            </div>
+            <div style="display: flex; gap: 6px; justify-content: space-between; flex-wrap: wrap;">
+                <button id="btn-adjust-funds" onclick="openAdjustmentModal()" style="flex: 1; padding: 4px 6px; font-size: 0.8rem; background-color: var(--wood-dark); margin: 0; line-height: 1.2;">Adjust</button>
+                <button id="btn-export-session" onclick="CasinoSaveManager.exportSave()" style="flex: 1; padding: 4px 6px; font-size: 0.8rem; background-color: var(--wood-dark); margin: 0; line-height: 1.2;">Export</button>
+                <button id="btn-import-session" onclick="document.getElementById('import-file-input').click()" style="flex: 1; padding: 4px 6px; font-size: 0.8rem; background-color: var(--wood-dark); margin: 0; line-height: 1.2;">Import</button>
+                <input type="file" id="import-file-input" style="display: none;" onchange="handleSaveImport(event)">
+            </div>
+        </div>
+        
+        <!-- Adjustment Modal -->
+        <div id="wallet-adjust-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 9999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+            <div class="setup-group" style="max-width: 400px; width: 90%; background-color: var(--felt-green); border: 4px solid var(--gold); padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                <h2 style="color: var(--gold-light); margin-top: 0;">Adjust Wallet Balance</h2>
+                <div style="margin-bottom: 15px; text-align: left;">
+                    <label style="display: block; margin-bottom: 5px; color: var(--gold-light);">Action:</label>
+                    <select id="adjust-action" style="width: 100%; box-sizing: border-box; background-color: var(--wood-dark); color: var(--gold-light); margin: 0;">
+                        <option value="add">Add Funds (Buy-in / Deposit)</option>
+                        <option value="remove">Remove Funds (Cash Out)</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 15px; text-align: left;">
+                    <label style="display: block; margin-bottom: 5px; color: var(--gold-light);">Amount ($):</label>
+                    <input type="number" id="adjust-amount" min="1" step="1" value="100" style="width: 100%; box-sizing: border-box; font-family: 'MedievalSharp', serif; background-color: var(--wood-dark); color: var(--gold-light); border: 2px solid var(--gold); padding: 8px; border-radius: 6px; font-size: 1.1rem;">
+                </div>
+                <div style="margin-bottom: 20px; text-align: left;">
+                    <label style="display: block; margin-bottom: 5px; color: var(--gold-light);">Optional Session Note:</label>
+                    <input type="text" id="adjust-note" placeholder="e.g. Bought more chips, cashed out" style="width: 100%; box-sizing: border-box; font-family: 'MedievalSharp', serif; background-color: var(--wood-dark); color: var(--gold-light); border: 2px solid var(--gold); padding: 8px; border-radius: 6px; font-size: 1.1rem;">
+                </div>
+                <div style="display: flex; gap: 15px; justify-content: space-between;">
+                    <button onclick="closeAdjustmentModal()" style="flex: 1; background-color: #333; border-color: #555; margin: 0;">Cancel</button>
+                    <button onclick="submitAdjustment()" style="flex: 1; margin: 0;">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <h2 style="margin-top:0; font-size:22px; text-align:center; color: var(--gold-light); text-shadow: 2px 2px 4px #000; font-family: 'MedievalSharp', serif;">Vae's Cee-lo Table</h2>
+
+        <!-- Bankrolls -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="info-card">
+                <h4>Player</h4>
+                <p id="player-bankroll">$200</p>
+            </div>
+            <div class="info-card">
+                <h4>Banker</h4>
+                <p id="banker-bankroll">$1000</p>
+            </div>
+        </div>
+
+        <!-- Betting Controls -->
+        <div id="betting-area" class="info-card" style="display: flex; flex-direction: column; gap: 8px;">
+            <h4 style="margin:0;">Select Bet</h4>
+            
+            <div class="chip-selector-group">
+                <img src="coppercoin.png" class="chip-option selected-chip" id="chip-5" onclick="selectChip(5)" alt="$5 chip">
+                <img src="silvercoin.png" class="chip-option" id="chip-25" onclick="selectChip(25)" alt="$25 chip">
+                <img src="goldcoin.png" class="chip-option" id="chip-100" onclick="selectChip(100)" alt="$100 chip">
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 1.1rem; padding: 0 5px;">
+                <span>Bet Amount:</span>
+                <span id="current-bet-display" style="font-weight: bold; color: var(--gold-light);">$5</span>
+            </div>
+
+            <div class="button-group">
+                <button id="btn-clear-bet" onclick="clearBet()" class="secondary-btn" style="margin-top: 5px;">Clear</button>
+                <button id="btn-place-bet" onclick="placeBet()" style="margin-top: 5px; background: #4CAF50; color: #fff;">Place Bet</button>
+            </div>
+        </div>
+
+        <!-- Main Game Controls -->
+        <div class="info-card" style="display: flex; flex-direction: column; gap: 8px;">
+            <div id="game-status-text" style="font-size: 1rem; color: #fff; min-height: 42px; display: flex; align-items: center; justify-content: center; line-height: 1.4;">
+                Place your bet to start the round!
+            </div>
+            
+            <button id="rollBtn" disabled style="background: #e65100; color: #fff;">ROLL DICE</button>
+            
+            <!-- Magic Nudge Controls -->
+            <div id="nudge-area" style="display: none; flex-direction: column; gap: 5px; margin-top: 5px;">
+                <h5 style="margin: 0; color: #ffd700; font-size: 0.9rem; text-align: center;">Magic-Hand Nudge (Once per round)</h5>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;">
+                    <button id="nudgeBtn-0" onclick="useNudge(0)" class="secondary-btn" style="margin-top:0; font-size:0.85rem; padding: 6px;">Die 1</button>
+                    <button id="nudgeBtn-1" onclick="useNudge(1)" class="secondary-btn" style="margin-top:0; font-size:0.85rem; padding: 6px;">Die 2</button>
+                    <button id="nudgeBtn-2" onclick="useNudge(2)" class="secondary-btn" style="margin-top:0; font-size:0.85rem; padding: 6px;">Die 3</button>
+                </div>
+            </div>
+
+            <button id="nextRoundBtn" onclick="nextRound()" class="hidden" style="background: #4CAF50; color: #fff;">Next Round</button>
+            <button id="cashOutBtn" onclick="cashOutAndQuit()" class="secondary-btn" style="margin-top: 5px;">Cash Out & Quit</button>
+        </div>
+
+        <!-- Collapsible Roll History -->
+        <div>
+            <div class="collapsible-header" onclick="toggleEmbedHistory()">
+                <span>Roll History</span>
+                <span id="history-arrow">▶</span>
+            </div>
+            <div id="history-content-embed" class="collapsible-content">
+                <div class="history-list-embed" id="history-list-embed">
+                    <div id="history-placeholder-embed" style="color: #888; text-align: center; font-size: 0.9rem; padding: 10px 0;">No rolls yet.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collapsible Developer / Dice Customization -->
+        <div>
+            <div class="collapsible-header" onclick="toggleDevPanel()">
+                <span>Dice Customization ⚙️</span>
+                <span id="dev-arrow">▶</span>
+            </div>
+            <div id="dev-content" class="collapsible-content">
+                <span class="file-label">1. Load 3D Model (.glb)</span>
+                <input type="file" id="uploadGLB" accept=".glb">
+
+                <span class="file-label">2. Load Saved Layout (Fallback)</span>
+                <input type="file" id="uploadConfig" accept=".json" disabled>
+
+                <div class="button-group">
+                    <button id="saveConfigBtn" class="secondary-btn" disabled style="font-size:0.8rem; padding:6px; margin-top: 5px;">Save Layout</button>
+                </div>
+
+                <div class="button-group" style="margin-top: 5px;">
+                    <button id="addDieBtn" class="secondary-btn" disabled style="font-size:0.8rem; padding:6px; margin-top: 0;">Duplicate</button>
+                    <button id="removeDieBtn" class="secondary-btn" disabled style="font-size:0.8rem; padding:6px; margin-top: 0;">Remove</button>
+                </div>
+
+                <div id="mapList" style="margin-top:5px; font-size:0.85rem;">Mapped Faces: 0 / 20 Max</div>
+                
+                <div style="font-size: 11px; color: #888; line-height: 1.4; margin-top: 5px;">
+                    - Double-click D6 faces to map.<br>
+                    - Left-click drag to rotate scene.
+                </div>
+            </div>
+        </div>
+        
+        <div id="result" style="display: none;"></div>
+    </div>
+
+    <!-- Banker Tall Side Window -->
+    <div id="dealer-panel">
+        <img id="dealer-avatar" src="dice/vae_neutral.webp" alt="Vae">
+        <div id="dealer-name">Vae (Banker)</div>
+        <div id="dealer-bubble">Ready to roll? Place your bet, mortal!</div>
+    </div>
+
+    <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+          "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
+        }
+      }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import * as CANNON from 'cannon-es';
+
+        // --- 1. Graphics Setup ---
+        const scene = new THREE.Scene();
+        const textureLoader = new THREE.TextureLoader();
+        const boardTexture = textureLoader.load('dice/gameboard.webp');
+        scene.background = boardTexture;
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 15, 20);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.enablePan = false;
+        controls.enableZoom = false;
+        controls.target.set(0, 5, 0);
+
+        const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambient);
+        const directional = new THREE.DirectionalLight(0xffffff, 2);
+        directional.position.set(10, 20, 10);
+        directional.castShadow = true;
+        scene.add(directional);
+
+        // --- 2. Physics Setup ---
+        const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -40, 0) });
+        const diceMat = new CANNON.Material();
+        const floorMat = new CANNON.Material();
+
+        world.addContactMaterial(new CANNON.ContactMaterial(floorMat, diceMat, { friction: 0.4, restitution: 0.4 }));
+
+        const floorBody = new CANNON.Body({ type: CANNON.Body.STATIC, shape: new CANNON.Plane(), material: floorMat });
+        floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+        world.addBody(floorBody);
+
+        const createWall = (position, eulerRotation) => {
+            const wall = new CANNON.Body({ type: CANNON.Body.STATIC, shape: new CANNON.Plane(), material: floorMat });
+            wall.position.copy(position);
+            wall.quaternion.setFromEuler(eulerRotation.x, eulerRotation.y, eulerRotation.z);
+            world.addBody(wall);
+        };
+
+        createWall(new CANNON.Vec3(16, 0, 0), new CANNON.Vec3(0, -Math.PI / 2, 0));
+        createWall(new CANNON.Vec3(-16, 0, 0), new CANNON.Vec3(0, Math.PI / 2, 0));
+        createWall(new CANNON.Vec3(0, 0, -12), new CANNON.Vec3(0, 0, 0));
+        createWall(new CANNON.Vec3(0, 0, 12), new CANNON.Vec3(0, Math.PI, 0));
+
+        // Transparent shadow receiver over background image
+        const planeMat = new THREE.ShadowMaterial({ opacity: 0.4 });
+        const planeMesh = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), planeMat);
+        planeMesh.rotation.x = -Math.PI / 2;
+        planeMesh.receiveShadow = true;
+        scene.add(planeMesh);
+
+        let activeDice = [];
+        let diceTemplateMesh = null;
+        let diceTemplateSize = null;
+        let faceMap = [];
+        let isRollingAll = false;
+        let isConfiguring = true;
+        let rollCounter = 0;
+        const MAX_FACES = 20;
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // --- Cee-lo Game State ---
+        let playerBankroll = window.CasinoSaveManager ? window.CasinoSaveManager.getBankroll() : 200;
+        let bankerBankroll = 1000;
+        let selectedChipValue = 5;
+        let currentBet = 0;
+        let gameStage = 'betting'; // 'betting', 'banker_turn', 'player_turn', 'resolution'
+        let bankerRollResult = null;
+        let playerRollResult = null;
+        let hasNudgedThisRound = false;
+        let activeNudgeIndex = -1;
+
+        const vaeImages = {
+            neutral: ['dice/vae_neutral.webp', 'dice/vae_neutral1.webp'],
+            boast: ['dice/vae_boast.webp', 'dice/vae_boast1.webp', 'dice/vae_boast2.webp', 'dice/vae_boast3.webp'],
+            draw: ['dice/vae_draw.webp', 'dice/vae_draw1.webp'],
+            loss: ['dice/vae_loss.webp', 'dice/vae_loss1.webp', 'dice/vae_loss3.webp'],
+            win: ['dice/vae_win.webp', 'dice/vae_win1.webp', 'dice/vae_win2.webp']
+        };
+
+        const vaeDialogues = {
+            neutral: [
+                "Care to make another bet, mortal?",
+                "The dice are warm. Are you ready to lose?",
+                "My table, my rules. Let's see your silver."
+            ],
+            boast: [
+                "Ha! Top that if you can!",
+                "A solid roll. Your chances are looking slim.",
+                "See that? The spirits of the dice favor me today!"
+            ],
+            draw: [
+                "A tie? Hmph. You got lucky this time.",
+                "A push. We roll again next round.",
+                "Neither win nor loss. How tedious."
+            ],
+            loss: [
+                "No! How could the dice betray me?!",
+                "Ugh... take your winnings and go before I change my mind.",
+                "Beginner's luck. It won't save you next round."
+            ],
+            win: [
+                "Victory is mine! Better luck next time, mortal.",
+                "As expected. Your bankroll belongs to me now.",
+                "Hahaha! Back to the tavern with you!"
+            ]
+        };
+
+        function setVaeState(stateType, customText = "") {
+            const avatar = document.getElementById('dealer-avatar');
+            const bubble = document.getElementById('dealer-bubble');
+            if (!avatar || !bubble) return;
+
+            const imgList = vaeImages[stateType] || vaeImages.neutral;
+            const randomImg = imgList[Math.floor(Math.random() * imgList.length)];
+            
+            let text = customText;
+            if (!text) {
+                const dialogues = vaeDialogues[stateType] || vaeDialogues.neutral;
+                text = dialogues[Math.floor(Math.random() * dialogues.length)];
+            }
+
+            avatar.style.opacity = 0.3;
+            setTimeout(() => {
+                avatar.src = randomImg;
+                avatar.style.opacity = 1;
+            }, 100);
+
+            bubble.innerText = text;
+        }
+
+        function updateUIState() {
+            document.getElementById('mapList').innerText = `Mapped Faces: ${faceMap.length} / ${MAX_FACES} Max`;
+            if (faceMap.length > 0) {
+                document.getElementById('saveConfigBtn').disabled = false;
+            } else {
+                document.getElementById('saveConfigBtn').disabled = true;
+            }
+
+            if (faceMap.length >= 2) {
+                document.getElementById('mapList').style.color = "#4CAF50";
+            } else {
+                document.getElementById('mapList').style.color = "#00bcd4";
+            }
+
+            if (faceMap.length >= MAX_FACES) {
+                document.getElementById('mapList').style.color = "#ffeb3b";
+            }
+        }
+
+        // --- Dice Spawning & Rearranging ---
+        function clearAllDice() {
+            activeDice.forEach(d => {
+                scene.remove(d.mesh);
+                world.removeBody(d.body);
+            });
+            activeDice = [];
+            document.getElementById('addDieBtn').disabled = true;
+            document.getElementById('removeDieBtn').disabled = true;
+        }
+
+        function spawnDie() {
+            if (!diceTemplateMesh || activeDice.length >= 3) return;
+
+            const mesh = diceTemplateMesh.clone();
+            mesh.traverse((child) => { if (child.isMesh) child.castShadow = true; });
+
+            const size = diceTemplateSize;
+            const boxShape = new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2));
+            const body = new CANNON.Body({
+                mass: 0,
+                type: CANNON.Body.STATIC,
+                material: diceMat,
+                linearDamping: 0.1,
+                angularDamping: 0.1
+            });
+            body.addShape(boxShape);
+
+            scene.add(mesh);
+            world.addBody(body);
+
+            activeDice.push({ mesh, body, isRolling: false, rollTimer: 0 });
+            rearrangeDice();
+
+            document.getElementById('addDieBtn').disabled = (activeDice.length >= 3);
+            document.getElementById('removeDieBtn').disabled = (activeDice.length <= 1);
+        }
+
+        function removeDie() {
+            if (activeDice.length <= 1) return;
+            const d = activeDice.pop();
+            scene.remove(d.mesh);
+            world.removeBody(d.body);
+            rearrangeDice();
+
+            document.getElementById('addDieBtn').disabled = (activeDice.length >= 3);
+            document.getElementById('removeDieBtn').disabled = (activeDice.length <= 1);
+        }
+
+        function rearrangeDice() {
+            const count = activeDice.length;
+            if (count === 1) {
+                activeDice[0].body.position.set(0, 5, 0);
+            } else if (count === 2) {
+                activeDice[0].body.position.set(-3, 5, 0);
+                activeDice[1].body.position.set(3, 5, 0);
+            } else if (count === 3) {
+                activeDice[0].body.position.set(-5, 5, 0);
+                activeDice[1].body.position.set(0, 5, 0);
+                activeDice[2].body.position.set(5, 5, 0);
+            }
+            activeDice.forEach(d => {
+                d.body.velocity.set(0, 0, 0);
+                d.body.angularVelocity.set(0, 0, 0);
+                d.body.type = CANNON.Body.STATIC;
+                d.body.mass = 0;
+                d.body.updateMassProperties();
+
+                d.mesh.position.copy(d.body.position);
+                d.mesh.quaternion.copy(d.body.quaternion);
+            });
+        }
+
+        document.getElementById('addDieBtn').addEventListener('click', spawnDie);
+        document.getElementById('removeDieBtn').addEventListener('click', removeDie);
+
+        // --- Preload lulud6.glb ---
+        function preloadLulud6() {
+            const loader = new GLTFLoader();
+            loader.load('lulud6.glb', function (gltf) {
+                clearAllDice();
+
+                faceMap = [
+                    { value: "4", axis: new THREE.Vector3(0, 0, 1) },
+                    { value: "1", axis: new THREE.Vector3(0, 1, 0) },
+                    { value: "2", axis: new THREE.Vector3(-1, 0, 0) },
+                    { value: "3", axis: new THREE.Vector3(0, 0, -1) },
+                    { value: "5", axis: new THREE.Vector3(1, 0, 0) },
+                    { value: "6", axis: new THREE.Vector3(0, -1, 0) }
+                ];
+
+                isConfiguring = true;
+                isRollingAll = false;
+                updateUIState();
+
+                const mesh = gltf.scene;
+                const box = new THREE.Box3().setFromObject(mesh);
+                const center = box.getCenter(new THREE.Vector3());
+                mesh.position.sub(center);
+
+                const wrapper = new THREE.Group();
+                wrapper.add(mesh);
+
+                diceTemplateMesh = wrapper;
+                diceTemplateSize = box.getSize(new THREE.Vector3());
+
+                // Spawns 3 dice on startup for Cee-lo!
+                spawnDie();
+                spawnDie();
+                spawnDie();
+
+                document.getElementById('rollBtn').disabled = true; // wait for bet
+                document.getElementById('uploadConfig').disabled = false;
+                document.getElementById('saveConfigBtn').disabled = false;
+
+                console.log("Preloaded lulud6.glb and applied baked-in face layout successfully.");
+            }, undefined, function (error) {
+                console.log("Auto-preload of lulud6.glb skipped/failed:", error.message);
+            });
+        }
+        preloadLulud6();
+
+        // --- Auto-Load Local JSON Config ---
+        async function attemptLocalConfigLoad() {
+            try {
+                const response = await fetch('dice_layout.json');
+                if (!response.ok) throw new Error("Local config not found or CORS blocked.");
+                const importedData = await response.json();
+
+                const clampedData = importedData.slice(0, MAX_FACES);
+                faceMap = clampedData.map(face => ({
+                    value: face.value,
+                    axis: new THREE.Vector3(face.axis.x, face.axis.y, face.axis.z)
+                }));
+                updateUIState();
+                console.log(`Auto-loaded local dice_layout.json successfully. (${faceMap.length} faces)`);
+            } catch (err) {
+                console.log("Local config auto-load skipped. Fallback upload active. Reason:", err.message);
+            }
+        }
+        setTimeout(() => {
+            if (faceMap.length === 0) {
+                attemptLocalConfigLoad();
+            }
+        }, 1000);
+
+        window.addEventListener('dblclick', (event) => {
+            if (activeDice.length === 0 || !isConfiguring) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const meshes = activeDice.map(d => d.mesh);
+            const intersects = raycaster.intersectObjects(meshes, true);
+            if (intersects.length > 0) {
+                const hitObject = intersects[0].object;
+                let clickedDie = null;
+                for (let d of activeDice) {
+                    let match = false;
+                    d.mesh.traverse(child => {
+                        if (child === hitObject) match = true;
+                    });
+                    if (match) {
+                        clickedDie = d;
+                        break;
+                    }
+                }
+                if (!clickedDie) return;
+
+                const faceNormal = intersects[0].face.normal.clone();
+                const normalMatrix = new THREE.Matrix3().getNormalMatrix(intersects[0].object.matrixWorld);
+                const worldNormal = faceNormal.applyMatrix3(normalMatrix).normalize();
+
+                const localNormal = worldNormal.transformDirection(clickedDie.mesh.matrixWorld.clone().invert()).normalize();
+
+                const existingIndex = faceMap.findIndex(f => f.axis.dot(localNormal) > 0.99);
+
+                if (existingIndex === -1 && faceMap.length >= MAX_FACES) {
+                    alert(`You have hit the maximum limit of ${MAX_FACES} mapped faces.`);
+                    return;
+                }
+
+                const promptText = existingIndex > -1 ? `Update mapped value for this face (currently ${faceMap[existingIndex].value}):` : "Assign new Pip Value for this face:";
+                const pipValue = prompt(promptText);
+
+                if (pipValue !== null && pipValue.trim() !== "") {
+                    if (existingIndex > -1) {
+                        faceMap[existingIndex].value = pipValue;
+                    } else {
+                        faceMap.push({ axis: localNormal, value: pipValue });
+                    }
+                    updateUIState();
+                }
+            }
+        });
+
+        // --- 4. File Handling (GLB and Manual Config) ---
+        document.getElementById('uploadGLB').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const fileNameClean = file.name.toLowerCase().replace('.glb', '');
+            const isAutoLayout = (fileNameClean === 'lulud6' || fileNameClean === 'dice1');
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const loader = new GLTFLoader();
+                loader.parse(event.target.result, '', function (gltf) {
+                    clearAllDice();
+
+                    if (isAutoLayout) {
+                        faceMap = [
+                            { value: "4", axis: new THREE.Vector3(0, 0, 1) },
+                            { value: "1", axis: new THREE.Vector3(0, 1, 0) },
+                            { value: "2", axis: new THREE.Vector3(-1, 0, 0) },
+                            { value: "3", axis: new THREE.Vector3(0, 0, -1) },
+                            { value: "5", axis: new THREE.Vector3(1, 0, 0) },
+                            { value: "6", axis: new THREE.Vector3(0, -1, 0) }
+                        ];
+                    } else {
+                        faceMap = [];
+                    }
+
+                    isConfiguring = true;
+                    isRollingAll = false;
+                    updateUIState();
+                    document.getElementById('result').innerText = "";
+                    document.getElementById('rollBtn').innerText = "ROLL DICE";
+                    document.getElementById('uploadConfig').disabled = false;
+
+                    const mesh = gltf.scene;
+                    const box = new THREE.Box3().setFromObject(mesh);
+                    const center = box.getCenter(new THREE.Vector3());
+                    mesh.position.sub(center);
+
+                    const wrapper = new THREE.Group();
+                    wrapper.add(mesh);
+
+                    diceTemplateMesh = wrapper;
+                    diceTemplateSize = box.getSize(new THREE.Vector3());
+
+                    // Spawns 3 dice on upload for Cee-lo!
+                    spawnDie();
+                    spawnDie();
+                    spawnDie();
+
+                    document.getElementById('rollBtn').disabled = true; // wait for bet
+                    document.getElementById('addDieBtn').disabled = false;
+                    document.getElementById('removeDieBtn').disabled = true;
+
+                    controls.target.set(0, 5, 0);
+                    camera.position.set(0, 10, 15);
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        document.getElementById('saveConfigBtn').addEventListener('click', () => {
+            if (faceMap.length === 0) return;
+            const exportData = faceMap.map(face => ({
+                value: face.value,
+                axis: { x: face.axis.x, y: face.axis.y, z: face.axis.z }
+            }));
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "dice_layout.json";
+            link.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('uploadConfig').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    const clampedData = importedData.slice(0, MAX_FACES);
+
+                    faceMap = clampedData.map(face => ({
+                        value: face.value,
+                        axis: new THREE.Vector3(face.axis.x, face.axis.y, face.axis.z)
+                    }));
+                    updateUIState();
+                    alert(`Successfully loaded ${faceMap.length} faces from config!`);
+                } catch (err) {
+                    alert("Error reading config file. Make sure it's a valid JSON layout.");
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        });
+
+        // --- Cee-lo Rank Evaluation Logic ---
+        function evaluateCeeloRoll(rawValues) {
+            const vals = rawValues.map(v => parseInt(v)).sort((a, b) => a - b);
+            
+            // Check for invalid dice values (in case custom dice are used)
+            if (vals.some(v => isNaN(v) || v < 1 || v > 6)) {
+                const sum = rawValues.map(Number).filter(v => !isNaN(v)).reduce((a, b) => a + b, 0);
+                return {
+                    type: 'point',
+                    rank: 100 + Math.min(6, Math.max(1, Math.round(sum / 3))),
+                    label: `Custom Sum: ${sum}`,
+                    values: rawValues
+                };
+            }
+            
+            // 1. 4-5-6 (Auto-Win)
+            if (vals[0] === 4 && vals[1] === 5 && vals[2] === 6) {
+                return { type: 'win', rank: 1000, label: '4-5-6 (Auto-Win)', values: vals };
+            }
+            
+            // 2. Trips (Three of a Kind)
+            if (vals[0] === vals[2]) {
+                const val = vals[0];
+                return { type: 'trips', rank: 500 + val, label: `Trips of ${val}`, values: vals };
+            }
+            
+            // 3. Point (Pair + Spare)
+            if (vals[0] === vals[1]) {
+                const spare = vals[2];
+                return { type: 'point', rank: 100 + spare, label: `Point of ${spare}`, values: vals };
+            }
+            if (vals[1] === vals[2]) {
+                const spare = vals[0];
+                return { type: 'point', rank: 100 + spare, label: `Point of ${spare}`, values: vals };
+            }
+            
+            // 4. 1-2-3 (Auto-Loss)
+            if (vals[0] === 1 && vals[1] === 2 && vals[2] === 3) {
+                return { type: 'loss', rank: 0, label: '1-2-3 (Auto-Loss)', values: vals };
+            }
+            
+            // 5. No Decision (Reroll)
+            return { type: 'none', rank: -1, label: 'No Decision (Reroll)', values: vals };
+        }
+
+        // --- Betting & Chips Logic ---
+        window.selectChip = function(value) {
+            if (gameStage !== 'betting') return;
+            selectedChipValue = value;
+            document.querySelectorAll('.chip-option').forEach(img => {
+                img.classList.remove('selected-chip');
+            });
+            const selected = document.getElementById(`chip-${value}`);
+            if (selected) {
+                selected.classList.add('selected-chip');
+            }
+            updateBettingUI();
+        };
+
+        window.clearBet = function() {
+            if (gameStage !== 'betting') return;
+            if (currentBet > 0) {
+                CasinoSaveManager.addTransaction("ceelo", currentBet, "refund", currentBet, {
+                    note: `Bet cleared: $${currentBet}`
+                });
+                playerBankroll += currentBet;
+                currentBet = 0;
+            }
+            updateBettingUI();
+        };
+
+        window.placeBet = function() {
+            if (gameStage !== 'betting') return;
+            if (playerBankroll < selectedChipValue) {
+                alert("You don't have enough bankroll to bet that chip value!");
+                return;
+            }
+            CasinoSaveManager.addTransaction("ceelo", selectedChipValue, "bet", -selectedChipValue, {
+                note: `Bet placed: $${selectedChipValue}`
+            });
+            currentBet += selectedChipValue;
+            playerBankroll -= selectedChipValue;
+            updateBettingUI();
+        };
+
+        function updateBettingUI() {
+            document.getElementById('player-bankroll').innerText = `$${playerBankroll}`;
+            document.getElementById('banker-bankroll').innerText = `$${bankerBankroll}`;
+            document.getElementById('current-bet-display').innerText = `$${currentBet}`;
+            
+            const placeBtn = document.getElementById('btn-place-bet');
+            const rollBtn = document.getElementById('rollBtn');
+            
+            if (currentBet > 0) {
+                placeBtn.innerText = `Add Bet (+$${selectedChipValue})`;
+                rollBtn.disabled = false;
+                rollBtn.innerText = "START TURN";
+            } else {
+                placeBtn.innerText = "Place Bet";
+                rollBtn.disabled = true;
+                rollBtn.innerText = "ROLL DICE";
+            }
+        }
+
+        // --- Cee-lo Gameplay Loop Actions ---
+        function triggerRollAll() {
+            isRollingAll = true;
+            controls.target.set(0, 0, 0);
+
+            activeDice.forEach((d, idx) => {
+                d.isRolling = true;
+                d.rollTimer = 0;
+
+                d.body.type = CANNON.Body.DYNAMIC;
+                d.body.mass = 1;
+                d.body.updateMassProperties();
+                d.body.wakeUp();
+
+                const offsetX = (idx - (activeDice.length - 1) / 2) * 4;
+                d.body.position.set(offsetX, 12, (Math.random() - 0.5) * 3);
+
+                d.body.velocity.set((Math.random() - 0.5) * 15, -10 - Math.random() * 5, (Math.random() - 0.5) * 15);
+                d.body.angularVelocity.set(
+                    (Math.random() - 0.5) * 40,
+                    (Math.random() - 0.5) * 40,
+                    (Math.random() - 0.5) * 40
+                );
+            });
+        }
+
+        document.getElementById('rollBtn').addEventListener('click', () => {
+            if (activeDice.length === 0) return;
+            
+            if (gameStage === 'betting') {
+                // Shift to Banker Turn
+                gameStage = 'banker_turn';
+                document.getElementById('rollBtn').disabled = true;
+                document.getElementById('rollBtn').innerText = "Rolling...";
+                document.getElementById('btn-place-bet').disabled = true;
+                document.getElementById('btn-clear-bet').disabled = true;
+                document.getElementById('game-status-text').innerHTML = "Banker Vae is rolling the dice...";
+                
+                triggerRollAll();
+            } else if (gameStage === 'player_turn') {
+                if (playerRollResult && !hasNudgedThisRound) {
+                    // Player decided to Keep Roll & Resolve
+                    resolveCeeloRound();
+                } else {
+                    // Regular Player Roll
+                    document.getElementById('rollBtn').disabled = true;
+                    document.getElementById('rollBtn').innerText = "Rolling...";
+                    document.getElementById('game-status-text').innerHTML = "Rolling your dice...";
+                    
+                    triggerRollAll();
+                }
+            }
+        });
+
+        window.useNudge = function(dieIdx) {
+            if (gameStage !== 'player_turn' || hasNudgedThisRound) return;
+            
+            hasNudgedThisRound = true;
+            activeNudgeIndex = dieIdx;
+            document.getElementById('nudge-area').style.display = 'none';
+
+            isRollingAll = true;
+            document.getElementById('game-status-text').innerHTML = `Magic-Hand Nudge! Rerolling Die ${dieIdx + 1}...`;
+
+            const d = activeDice[dieIdx];
+            d.isRolling = true;
+            d.rollTimer = 0;
+
+            d.body.type = CANNON.Body.DYNAMIC;
+            d.body.mass = 1;
+            d.body.updateMassProperties();
+            d.body.wakeUp();
+
+            d.body.position.y = 8;
+            d.body.velocity.set((Math.random() - 0.5) * 10, -5, (Math.random() - 0.5) * 10);
+            d.body.angularVelocity.set(
+                (Math.random() - 0.5) * 35,
+                (Math.random() - 0.5) * 35,
+                (Math.random() - 0.5) * 35
+            );
+        };
+
+        window.resolveBankerAutoDecision = function(bResult) {
+            gameStage = 'resolution';
+            document.getElementById('rollBtn').classList.add('hidden');
+            document.getElementById('nextRoundBtn').classList.remove('hidden');
+
+            let statusStr = "";
+            let vaeState = "neutral";
+            let vaeText = "";
+            let wonAmount = 0;
+
+            if (bResult.type === 'win' || bResult.rank === 106) {
+                bankerBankroll += currentBet;
+                statusStr = `Banker wins automatically with ${bResult.label}! Lost: $${currentBet}`;
+                vaeState = "win";
+                vaeText = "Instant win! House sweeps the table!";
+                wonAmount = 0;
+            } else if (bResult.type === 'loss' || bResult.rank === 101) {
+                wonAmount = currentBet * 2;
+                playerBankroll += wonAmount;
+                statusStr = `Banker loses automatically with ${bResult.label}! Payout: $${currentBet}`;
+                vaeState = "loss";
+                vaeText = "Ugh... automatic loss. Take your money.";
+            }
+
+            CasinoSaveManager.addTransaction("ceelo", currentBet, wonAmount > 0 ? "win" : "lose", wonAmount, {
+                bankerRoll: bResult.values,
+                bankerRank: bResult.label,
+                note: wonAmount > 0 ? `Won $${currentBet}` : `Lost bet`
+            });
+
+            document.getElementById('game-status-text').innerHTML = statusStr;
+            document.getElementById('player-bankroll').innerText = `$${playerBankroll}`;
+            document.getElementById('banker-bankroll').innerText = `$${bankerBankroll}`;
+
+            setVaeState(vaeState, vaeText);
+            addEmbedRollHistory(null, bResult, statusStr);
+        };
+
+        window.resolveCeeloRound = function() {
+            gameStage = 'resolution';
+            document.getElementById('nudge-area').style.display = 'none';
+            document.getElementById('rollBtn').classList.add('hidden');
+            document.getElementById('nextRoundBtn').classList.remove('hidden');
+
+            const pRank = playerRollResult.rank;
+            const bRank = bankerRollResult.rank;
+
+            let statusStr = "";
+            let vaeState = "neutral";
+            let vaeText = "";
+            let wonAmount = 0;
+            let outcome = "lose";
+
+            if (pRank > bRank) {
+                wonAmount = currentBet * 2;
+                playerBankroll += wonAmount;
+                statusStr = `You win! ${playerRollResult.label} beats Banker's ${bankerRollResult.label}. Payout: $${currentBet}`;
+                vaeState = "loss";
+                vaeText = "No! My points were defeated! Well played...";
+                outcome = "win";
+            } else if (pRank < bRank) {
+                bankerBankroll += currentBet;
+                statusStr = `Banker wins! ${bankerRollResult.label} beats ${playerRollResult.label}. Lost: $${currentBet}`;
+                vaeState = "win";
+                vaeText = "Hahaha! Yes! The cards and the dice are mine!";
+                outcome = "lose";
+                wonAmount = 0;
+            } else {
+                wonAmount = currentBet;
+                playerBankroll += wonAmount;
+                statusStr = `Push (Tie)! Both rolled ${playerRollResult.label}. Bet returned.`;
+                vaeState = "draw";
+                vaeText = "A push. We match points.";
+                outcome = "push";
+            }
+
+            CasinoSaveManager.addTransaction("ceelo", currentBet, outcome, wonAmount, {
+                playerRoll: playerRollResult.values,
+                playerRank: playerRollResult.label,
+                bankerRoll: bankerRollResult.values,
+                bankerRank: bankerRollResult.label,
+                note: wonAmount > currentBet ? `Won $${currentBet}` : (wonAmount === currentBet ? "Tie, bet returned" : "Lost bet")
+            });
+
+            document.getElementById('game-status-text').innerHTML = statusStr;
+            document.getElementById('player-bankroll').innerText = `$${playerBankroll}`;
+            document.getElementById('banker-bankroll').innerText = `$${bankerBankroll}`;
+            
+            setVaeState(vaeState, vaeText);
+            addEmbedRollHistory(playerRollResult, bankerRollResult, statusStr);
+        };
+
+        window.nextRound = function() {
+            currentBet = 0;
+            bankerRollResult = null;
+            playerRollResult = null;
+            hasNudgedThisRound = false;
+            activeNudgeIndex = -1;
+            gameStage = 'betting';
+
+            document.getElementById('nextRoundBtn').classList.add('hidden');
+            document.getElementById('rollBtn').classList.remove('hidden');
+            document.getElementById('rollBtn').disabled = true;
+            document.getElementById('rollBtn').innerText = "ROLL DICE";
+            document.getElementById('nudge-area').style.display = 'none';
+            document.getElementById('btn-place-bet').disabled = false;
+            document.getElementById('btn-clear-bet').disabled = false;
+
+            rearrangeDice();
+            setVaeState('neutral');
+            updateBettingUI();
+        };
+
+        window.cashOutAndQuit = function() {
+            alert(`Leaving Cee-lo with $${playerBankroll}.`);
+            bankerBankroll = 1000;
+            nextRound();
+            window.location.href = 'index.html';
+        };
+
+        // Embedded history list
+        function addEmbedRollHistory(playerRoll, bankerRoll, statusText) {
+            const listEl = document.getElementById('history-list-embed');
+            const placeholder = document.getElementById('history-placeholder-embed');
+            if (placeholder) {
+                placeholder.remove();
+            }
+
+            rollCounter++;
+            let htmlContent = "";
+            if (playerRoll) {
+                htmlContent = `
+                    <div style="font-weight: bold; color: var(--gold-light);">Roll #${rollCounter}</div>
+                    <div>Banker: ${bankerRoll.label} [${bankerRoll.values.join(',')}]</div>
+                    <div>Player: ${playerRoll.label} [${playerRoll.values.join(',')}]</div>
+                    <div style="font-size: 0.82rem; color: #bbb; margin-top: 2px; line-height: 1.3;">${statusText}</div>
+                `;
+            } else {
+                htmlContent = `
+                    <div style="font-weight: bold; color: var(--gold-light);">Roll #${rollCounter} (Instant)</div>
+                    <div>Banker: ${bankerRoll.label} [${bankerRoll.values.join(',')}]</div>
+                    <div style="font-size: 0.82rem; color: #bbb; margin-top: 2px; line-height: 1.3;">${statusText}</div>
+                `;
+            }
+
+            const item = document.createElement('div');
+            item.className = 'history-item-embed';
+            item.innerHTML = htmlContent;
+
+            listEl.insertBefore(item, listEl.firstChild);
+        }
+
+        window.toggleEmbedHistory = function() {
+            const content = document.getElementById('history-content-embed');
+            const arrow = document.getElementById('history-arrow');
+            content.classList.toggle('expanded');
+            if (content.classList.contains('expanded')) {
+                arrow.innerText = '▼';
+            } else {
+                arrow.innerText = '▶';
+            }
+        };
+
+        window.toggleDevPanel = function() {
+            const content = document.getElementById('dev-content');
+            const arrow = document.getElementById('dev-arrow');
+            content.classList.toggle('expanded');
+            if (content.classList.contains('expanded')) {
+                arrow.innerText = '▼';
+            } else {
+                arrow.innerText = '▶';
+            }
+        };
+
+        const timeStep = 1 / 60;
+        function animate() {
+            requestAnimationFrame(animate);
+            world.step(timeStep);
+            controls.update();
+
+            activeDice.forEach(d => {
+                d.mesh.position.copy(d.body.position);
+                d.mesh.quaternion.copy(d.body.quaternion);
+
+                if (isRollingAll && d.isRolling) {
+                    d.rollTimer += timeStep;
+                    if (d.rollTimer > 0.6 && d.body.velocity.lengthSquared() < 0.1 && d.body.angularVelocity.lengthSquared() < 0.1) {
+                        d.isRolling = false;
+                    }
+                }
+            });
+
+            if (isRollingAll) {
+                const allStopped = activeDice.every(d => !d.isRolling);
+                if (allStopped) {
+                    isRollingAll = false;
+
+                    const results = [];
+                    let cockedFound = false;
+
+                    activeDice.forEach(d => {
+                        let bestMatch = -1;
+                        let winningValue = "?";
+                        const worldUp = new THREE.Vector3(0, 1, 0);
+
+                        faceMap.forEach(face => {
+                            const currentWorldAxis = face.axis.clone().transformDirection(d.mesh.matrixWorld).normalize();
+                            const dotProduct = currentWorldAxis.dot(worldUp);
+
+                            if (dotProduct > bestMatch) {
+                                bestMatch = dotProduct;
+                                winningValue = face.value;
+                            }
+                        });
+
+                        if (bestMatch > 0.5 && winningValue !== "?") {
+                            results.push(winningValue);
+                        } else {
+                            results.push("Cocked");
+                            cockedFound = true;
+                        }
+                    });
+
+                    if (cockedFound) {
+                        alert("One of the dice is cocked! Rerolling...");
+                        if (activeNudgeIndex >= 0) {
+                            useNudge(activeNudgeIndex);
+                        } else {
+                            triggerRollAll();
+                        }
+                        return;
+                    }
+
+                    const rollEval = evaluateCeeloRoll(results);
+
+                    if (gameStage === 'banker_turn') {
+                        if (rollEval.type === 'none') {
+                            document.getElementById('game-status-text').innerHTML = `Banker rolled ${results.join('-')} (No Decision). Rerolling...`;
+                            setTimeout(() => {
+                                triggerRollAll();
+                            }, 1500);
+                        } else {
+                            bankerRollResult = rollEval;
+                            document.getElementById('game-status-text').innerHTML = `Banker Vae rolled: <strong>${rollEval.label}</strong>`;
+                            
+                            if (rollEval.type === 'win' || rollEval.type === 'loss' || rollEval.rank === 106 || rollEval.rank === 101) {
+                                resolveBankerAutoDecision(rollEval);
+                            } else {
+                                gameStage = 'player_turn';
+                                document.getElementById('game-status-text').innerHTML = `Banker point: <strong>${rollEval.label}</strong>.<br>Your turn! Roll to beat Vae.`;
+                                document.getElementById('rollBtn').disabled = false;
+                                document.getElementById('rollBtn').innerText = "ROLL DICE";
+                                setVaeState('boast');
+                            }
+                        }
+                    } else if (gameStage === 'player_turn') {
+                        if (activeNudgeIndex >= 0) {
+                            activeNudgeIndex = -1;
+                            playerRollResult = rollEval;
+                            document.getElementById('game-status-text').innerHTML = `Nudged! You rolled: <strong>${rollEval.label}</strong>.`;
+                            resolveCeeloRound();
+                        } else {
+                            if (rollEval.type === 'none') {
+                                document.getElementById('game-status-text').innerHTML = `You rolled ${results.join('-')} (No Decision). Rerolling...`;
+                                setTimeout(() => {
+                                    triggerRollAll();
+                                }, 1500);
+                            } else {
+                                playerRollResult = rollEval;
+                                document.getElementById('game-status-text').innerHTML = `You rolled: <strong>${rollEval.label}</strong>.`;
+                                
+                                if (!hasNudgedThisRound) {
+                                    document.getElementById('game-status-text').innerHTML = `You rolled <strong>${rollEval.label}</strong>.<br>Use your Magic Nudge or Resolve!`;
+                                    document.getElementById('nudge-area').style.display = 'flex';
+                                    document.getElementById('rollBtn').disabled = false;
+                                    document.getElementById('rollBtn').innerText = "KEEP ROLL & RESOLVE";
+                                } else {
+                                    resolveCeeloRound();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+        // Save System Integration
+        window.openAdjustmentModal = function() {
+            document.getElementById('wallet-adjust-modal').style.display = 'flex';
+        };
+        window.closeAdjustmentModal = function() {
+            document.getElementById('wallet-adjust-modal').style.display = 'none';
+            document.getElementById('adjust-note').value = '';
+        };
+        window.submitAdjustment = function() {
+            const action = document.getElementById('adjust-action').value;
+            const amount = parseFloat(document.getElementById('adjust-amount').value);
+            const note = document.getElementById('adjust-note').value;
+            if (isNaN(amount) || amount <= 0) {
+                alert("Please enter a valid positive amount.");
+                return;
+            }
+            if (action === 'add') {
+                CasinoSaveManager.addFunds(amount, note || "Deposit buy-in");
+            } else {
+                const currentBalance = CasinoSaveManager.getBankroll();
+                if (amount > currentBalance) {
+                    alert("Cannot cash out more than your current wallet balance!");
+                    return;
+                }
+                CasinoSaveManager.cashOut(amount, note || "Cash-out withdrawal");
+            }
+            window.closeAdjustmentModal();
+        };
+        window.handleSaveImport = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                CasinoSaveManager.importSave(e.target.result, (err, newBalance) => {
+                    if (err) {
+                        alert("Error importing save: " + err.message);
+                    } else {
+                        alert("Session successfully imported! Balance: $" + newBalance);
+                    }
+                });
+            };
+            reader.readAsText(file);
+        };
+
+        function syncLocalBankroll(newBalance) {
+            playerBankroll = newBalance;
+            updateBettingUI();
+        }
+
+        // Initialize bankroll displays and subscribe to updates
+        const initialBalance = CasinoSaveManager.getBankroll();
+        playerBankroll = initialBalance;
+        const display = document.getElementById('session-bankroll-display');
+        if (display) display.innerText = '$' + initialBalance.toFixed(2);
+        updateBettingUI();
+
+        CasinoSaveManager.onUpdate((newBalance) => {
+            const display = document.getElementById('session-bankroll-display');
+            if (display) display.innerText = '$' + newBalance.toFixed(2);
+            syncLocalBankroll(newBalance);
+        });
+
+        animate();
+</script>
+</body>
+
+</html>

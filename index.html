@@ -415,13 +415,20 @@
 
         /* --- Game Selection Attract Cards --- */
         .game-picker-container {
-            display: flex;
-            gap: 25px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
             justify-content: center;
-            flex-wrap: wrap;
+            justify-items: center;
             margin-bottom: 20px;
             width: 100%;
-            max-width: 1300px;
+            max-width: 900px;
+        }
+
+        @media (min-width: 768px) {
+            .game-picker-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
 
         .game-card {
@@ -431,7 +438,8 @@
             border: 4px solid transparent;
             opacity: 0.6;
             transition: all 0.3s ease;
-            width: clamp(280px, 35vw, 420px);
+            width: 100%;
+            max-width: 280px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
         }
 
@@ -467,6 +475,7 @@
             box-sizing: border-box;
         }
     </style>
+    <script src="casinoSaveManager.js"></script>
 </head>
 
 <body>
@@ -488,6 +497,46 @@
     </div>
 
     <div class="container">
+        <!-- Save & Session Management Bar -->
+        <div id="save-session-bar" style="background: rgba(0, 0, 0, 0.4); border: 2px solid var(--gold); border-radius: 10px; padding: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; width: 100%; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.3rem; color: var(--gold-light); font-weight: bold;">SHARED WALLET:</span>
+                <span id="session-bankroll-display" style="font-size: 1.4rem; color: #fff; font-family: monospace; font-weight: bold; background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--gold);">$200.00</span>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button id="btn-adjust-funds" onclick="openAdjustmentModal()" style="padding: 6px 12px; font-size: 0.95rem; background-color: var(--wood-dark); margin: 0;">Adjust Wallet</button>
+                <button id="btn-export-session" onclick="CasinoSaveManager.exportSave()" style="padding: 6px 12px; font-size: 0.95rem; background-color: var(--wood-dark); margin: 0;">Export Save</button>
+                <button id="btn-import-session" onclick="document.getElementById('import-file-input').click()" style="padding: 6px 12px; font-size: 0.95rem; background-color: var(--wood-dark); margin: 0;">Import Save</button>
+                <input type="file" id="import-file-input" style="display: none;" onchange="handleSaveImport(event)">
+            </div>
+        </div>
+
+        <!-- Adjustment Modal -->
+        <div id="wallet-adjust-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 9999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+            <div class="setup-group" style="max-width: 400px; width: 90%; background-color: var(--felt-green); border: 4px solid var(--gold); padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                <h2 style="color: var(--gold-light); margin-top: 0;">Adjust Wallet Balance</h2>
+                <div style="margin-bottom: 15px; text-align: left;">
+                    <label style="display: block; margin-bottom: 5px; color: var(--gold-light);">Action:</label>
+                    <select id="adjust-action" style="width: 100%; box-sizing: border-box; background-color: var(--wood-dark); color: var(--gold-light); margin: 0;">
+                        <option value="add">Add Funds (Buy-in / Deposit)</option>
+                        <option value="remove">Remove Funds (Cash Out)</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 15px; text-align: left;">
+                    <label style="display: block; margin-bottom: 5px; color: var(--gold-light);">Amount ($):</label>
+                    <input type="number" id="adjust-amount" min="1" step="1" value="100" style="width: 100%; box-sizing: border-box; font-family: 'MedievalSharp', serif; background-color: var(--wood-dark); color: var(--gold-light); border: 2px solid var(--gold); padding: 8px; border-radius: 6px; font-size: 1.1rem;">
+                </div>
+                <div style="margin-bottom: 20px; text-align: left;">
+                    <label style="display: block; margin-bottom: 5px; color: var(--gold-light);">Optional Session Note:</label>
+                    <input type="text" id="adjust-note" placeholder="e.g. Bought more chips, cashed out" style="width: 100%; box-sizing: border-box; font-family: 'MedievalSharp', serif; background-color: var(--wood-dark); color: var(--gold-light); border: 2px solid var(--gold); padding: 8px; border-radius: 6px; font-size: 1.1rem;">
+                </div>
+                <div style="display: flex; gap: 15px; justify-content: space-between;">
+                    <button onclick="closeAdjustmentModal()" style="flex: 1; background-color: #333; border-color: #555; margin: 0;">Cancel</button>
+                    <button onclick="submitAdjustment()" style="flex: 1; margin: 0;">Confirm</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Setup Screen -->
         <div id="setup-screen">
             <div class="game-picker-container">
@@ -498,7 +547,16 @@
                     <img src="deck of cards game/holdemattract.webp" alt="Texas Hold'em (Dealer: Elva)" style="width: 100%; display: block;">
                 </div>
                 <div class="game-card" onclick="switchGamePage('slots')">
-                    <img src="slots/slotmachinegallery.webp" alt="Slots" style="width: 100%; display: block;">
+                    <img src="slots/slotmachineattract.webp" alt="Slots" style="width: 100%; display: block;">
+                </div>
+                <div class="game-card" onclick="switchGamePage('roulette')">
+                    <img src="roulette/rouletteattract.webp" alt="Roulette (Dealer: Clare)" style="width: 100%; display: block;">
+                </div>
+                <div class="game-card" onclick="switchGamePage('ceelo')">
+                    <img src="dice/ceeloattract.webp" alt="Cee-lo (Dealer: Vae)" style="width: 100%; display: block;">
+                </div>
+                <div class="game-card" onclick="switchGamePage('targetshooter')">
+                    <img src="targetshooter/diaperdollroundupattract.webp" alt="Target Shooter" style="width: 100%; display: block;">
                 </div>
             </div>
 
@@ -708,6 +766,14 @@
                 window.location.href = 'holdem.html';
             } else if (game === 'slots') {
                 window.location.href = 'slots.html';
+            } else if (game === 'roulette') {
+                window.location.href = 'roulette.html';
+            } else if (game === 'ceelo') {
+                window.location.href = 'dice.html';
+            } else if (game === 'targetshooter') {
+                window.location.href = 'targetshooter/targetshooter.html';
+            } else if (game === 'blackjack') {
+                window.location.href = 'index.html';
             }
         }
 
@@ -748,7 +814,7 @@
 
         function startGame() {
             currentBettingMode = document.getElementById('betting-mode').value;
-            const startCash = currentBettingMode === 'high' ? 1000 : 200;
+            const startCash = CasinoSaveManager.getBankroll();
             const count = parseInt(document.getElementById('mode-select').value);
 
             players = [];
@@ -757,7 +823,8 @@
                 players.push({
                     id: i, name: `Player ${i} (${type.toUpperCase()})`,
                     type: type, hand: [], status: 'betting',
-                    bankroll: startCash, currentBet: 0
+                    bankroll: i === 1 ? startCash : (currentBettingMode === 'high' ? 1000 : 200),
+                    currentBet: 0
                 });
             }
 
@@ -826,8 +893,16 @@
         }
 
         function confirmBet() {
-            players[currentPlayerIndex].status = 'playing';
-            players[currentPlayerIndex].bankroll -= players[currentPlayerIndex].currentBet;
+            const p = players[currentPlayerIndex];
+            p.status = 'playing';
+            p.bankroll -= p.currentBet;
+            
+            if (p.id === 1 && p.type === 'human') {
+                CasinoSaveManager.addTransaction("blackjack", p.currentBet, "bet", -p.currentBet, {
+                    note: `Bet placed: $${p.currentBet}`
+                });
+            }
+
             currentPlayerIndex++;
             updateUI();
             processBettingTurn();
@@ -982,19 +1057,34 @@
                 let isBJ = (p.hand.length === 2 && pTotal === 21);
                 let dIsBJ = (dealer.hand.length === 2 && dTotal === 21);
 
+                let wonAmount = 0;
                 if (p.status === 'bust') {
                     p.status = 'lose';
                 } else if (isBJ && !dIsBJ) {
                     p.status = 'win';
-                    p.bankroll += p.currentBet + (p.currentBet * payoutBJ);
+                    wonAmount = p.currentBet + (p.currentBet * payoutBJ);
+                    p.bankroll += wonAmount;
                 } else if (dealer.status === 'bust' || pTotal > dTotal) {
                     p.status = 'win';
-                    p.bankroll += p.currentBet + (p.currentBet * payoutNormal);
+                    wonAmount = p.currentBet + (p.currentBet * payoutNormal);
+                    p.bankroll += wonAmount;
                 } else if (pTotal < dTotal) {
                     p.status = 'lose';
                 } else {
                     p.status = 'push';
-                    p.bankroll += p.currentBet;
+                    wonAmount = p.currentBet;
+                    p.bankroll += wonAmount;
+                }
+
+                // If human player, log resolution transaction to the save manager
+                if (p.id === 1 && p.type === 'human') {
+                    CasinoSaveManager.addTransaction("blackjack", p.currentBet, p.status, wonAmount, {
+                        playerHand: p.hand.map(c => `${c.suitObj.short}-${c.valObj.short}`),
+                        playerTotal: pTotal,
+                        dealerHand: dealer.hand.map(c => `${c.suitObj.short}-${c.valObj.short}`),
+                        dealerTotal: dTotal,
+                        rules: currentBettingMode
+                    });
                 }
             }
 
@@ -1263,6 +1353,73 @@
                 setDealerExpression('neutral');
             }
         }
+
+        // Save System Integration
+        window.openAdjustmentModal = function() {
+            document.getElementById('wallet-adjust-modal').style.display = 'flex';
+        };
+        window.closeAdjustmentModal = function() {
+            document.getElementById('wallet-adjust-modal').style.display = 'none';
+            document.getElementById('adjust-note').value = '';
+        };
+        window.submitAdjustment = function() {
+            const action = document.getElementById('adjust-action').value;
+            const amount = parseFloat(document.getElementById('adjust-amount').value);
+            const note = document.getElementById('adjust-note').value;
+            if (isNaN(amount) || amount <= 0) {
+                alert("Please enter a valid positive amount.");
+                return;
+            }
+            if (action === 'add') {
+                CasinoSaveManager.addFunds(amount, note || "Deposit buy-in");
+            } else {
+                const currentBalance = CasinoSaveManager.getBankroll();
+                if (amount > currentBalance) {
+                    alert("Cannot cash out more than your current wallet balance!");
+                    return;
+                }
+                CasinoSaveManager.cashOut(amount, note || "Cash-out withdrawal");
+            }
+            window.closeAdjustmentModal();
+        };
+        window.handleSaveImport = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                CasinoSaveManager.importSave(e.target.result, (err, newBalance) => {
+                    if (err) {
+                        alert("Error importing save: " + err.message);
+                    } else {
+                        alert("Session successfully imported! Balance: $" + newBalance);
+                    }
+                });
+            };
+            reader.readAsText(file);
+        };
+
+        function syncLocalBankroll(newBalance) {
+            if (players && players.length > 0) {
+                const human = players.find(p => p.type === 'human') || players[0];
+                if (human) {
+                    human.bankroll = newBalance;
+                }
+            }
+            updateUI();
+        }
+
+        // Initialize bankroll displays and subscribe to updates
+        window.addEventListener('load', () => {
+            const initialBalance = CasinoSaveManager.getBankroll();
+            const display = document.getElementById('session-bankroll-display');
+            if (display) display.innerText = '$' + initialBalance.toFixed(2);
+
+            CasinoSaveManager.onUpdate((newBalance) => {
+                const display = document.getElementById('session-bankroll-display');
+                if (display) display.innerText = '$' + newBalance.toFixed(2);
+                syncLocalBankroll(newBalance);
+            });
+        });
     </script>
 </body>
 

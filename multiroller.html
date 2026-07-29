@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>GLB Dice Roller Pro</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #1a1a1a;
+            font-family: monospace;
+            color: #fff;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            width: 260px;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            margin-top: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            width: 100%;
+            transition: background 0.2s;
+            border-radius: 3px;
+        }
+
+        button:hover:not(:disabled) {
+            background: #45a049;
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            color: #888;
+        }
+
+        .secondary-btn {
+            background: #2196F3;
+        }
+
+        .secondary-btn:hover:not(:disabled) {
+            background: #1e88e5;
+        }
+
+        input[type="file"] {
+            margin-bottom: 5px;
+            font-size: 12px;
+            width: 100%;
+            color: #ccc;
+        }
+
+        .file-label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 10px;
+            display: block;
+        }
+
+        #status {
+            margin-top: 15px;
+            font-size: 13px;
+            color: #aaa;
+            line-height: 1.5;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        #result {
+            margin-top: 15px;
+            font-size: 26px;
+            font-weight: bold;
+            color: #4CAF50;
+            text-align: center;
+        }
+
+        #mapList {
+            margin-top: 15px;
+            font-size: 13px;
+            color: #00bcd4;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Roll History Panel */
+        #history-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.85);
+            border: 1px solid #444;
+            border-radius: 5px;
+            width: 280px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        #history-container.collapsed {
+            transform: translateX(calc(100% - 40px));
+        }
+
+        #history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: #2d2d2d;
+            cursor: pointer;
+            border-bottom: 1px solid #444;
+            border-radius: 4px 4px 0 0;
+            font-weight: bold;
+            user-select: none;
+        }
+
+        #history-header:hover {
+            background: #3d3d3d;
+        }
+
+        #history-list {
+            padding: 15px;
+            overflow-y: auto;
+            flex-grow: 1;
+            font-size: 13px;
+            line-height: 1.6;
+            max-height: 60vh;
+        }
+
+        .history-item {
+            border-bottom: 1px solid #333;
+            padding: 8px 0;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="ui">
+        <h2 style="margin-top:0; font-size:18px; text-align:center;">Universal Die Roller</h2>
+
+        <span class="file-label">1. Load 3D Model (.glb)</span>
+        <input type="file" id="uploadGLB" accept=".glb">
+
+        <span class="file-label" style="margin-top: 15px;">2. Load Saved Layout (Fallback)</span>
+        <input type="file" id="uploadConfig" accept=".json" disabled>
+
+        <div class="button-group">
+            <button id="saveConfigBtn" class="secondary-btn" disabled>Save Layout</button>
+        </div>
+
+        <div class="button-group" style="margin-top: 10px;">
+            <button id="addDieBtn" class="secondary-btn" disabled>Duplicate Die</button>
+            <button id="removeDieBtn" class="secondary-btn" disabled>Remove Die</button>
+        </div>
+
+        <div id="status">
+            - Double-click faces to map.<br>
+            - Left-click drag to rotate.<br>
+            - <i>Scroll/Pan disabled for stability.</i>
+        </div>
+
+        <div id="mapList">Mapped Faces: 0 / 20 Max</div>
+        <button id="rollBtn" disabled>ROLL DICE</button>
+        <div id="result"></div>
+    </div>
+
+    <!-- Roll History Panel -->
+    <div id="history-container">
+        <div id="history-header" onclick="toggleHistory()">
+            <span>Roll History</span>
+            <span id="history-toggle-icon">▼</span>
+        </div>
+        <div id="history-list">
+            <div id="history-placeholder" style="color: #888; text-align: center;">No rolls yet.</div>
+        </div>
+    </div>
+
+    <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+          "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
+        }
+      }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import * as CANNON from 'cannon-es';
+
+        // --- 1. Graphics Setup ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x222222);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 15, 20);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.enablePan = false;
+        controls.enableZoom = false;
+        controls.target.set(0, 5, 0);
+
+        const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambient);
+        const directional = new THREE.DirectionalLight(0xffffff, 2);
+        directional.position.set(10, 20, 10);
+        directional.castShadow = true;
+        scene.add(directional);
+
+        // --- 2. Physics Setup ---
+        const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -40, 0) });
+        const diceMat = new CANNON.Material();
+        const floorMat = new CANNON.Material();
+
+        world.addContactMaterial(new CANNON.ContactMaterial(floorMat, diceMat, { friction: 0.4, restitution: 0.4 }));
+
+        const floorBody = new CANNON.Body({ type: CANNON.Body.STATIC, shape: new CANNON.Plane(), material: floorMat });
+        floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+        world.addBody(floorBody);
+
+        const createWall = (position, eulerRotation) => {
+            const wall = new CANNON.Body({ type: CANNON.Body.STATIC, shape: new CANNON.Plane(), material: floorMat });
+            wall.position.copy(position);
+            wall.quaternion.setFromEuler(eulerRotation.x, eulerRotation.y, eulerRotation.z);
+            world.addBody(wall);
+        };
+
+        createWall(new CANNON.Vec3(16, 0, 0), new CANNON.Vec3(0, -Math.PI / 2, 0));
+        createWall(new CANNON.Vec3(-16, 0, 0), new CANNON.Vec3(0, Math.PI / 2, 0));
+        createWall(new CANNON.Vec3(0, 0, -12), new CANNON.Vec3(0, 0, 0));
+        createWall(new CANNON.Vec3(0, 0, 12), new CANNON.Vec3(0, Math.PI, 0));
+
+        const planeMesh = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+        planeMesh.rotation.x = -Math.PI / 2;
+        planeMesh.receiveShadow = true;
+        scene.add(planeMesh);
+        let activeDice = [];
+        let diceTemplateMesh = null;
+        let diceTemplateSize = null;
+        let faceMap = [];
+        let isRollingAll = false;
+        let isConfiguring = true;
+        let rollCounter = 0;
+        const MAX_FACES = 20;
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        function updateUIState() {
+            document.getElementById('mapList').innerText = `Mapped Faces: ${faceMap.length} / ${MAX_FACES} Max`;
+            if (faceMap.length > 0) {
+                document.getElementById('saveConfigBtn').disabled = false;
+            } else {
+                document.getElementById('saveConfigBtn').disabled = true;
+            }
+
+            if (faceMap.length >= 2) {
+                document.getElementById('mapList').style.color = "#4CAF50";
+            } else {
+                document.getElementById('mapList').style.color = "#00bcd4";
+            }
+
+            if (faceMap.length >= MAX_FACES) {
+                document.getElementById('mapList').style.color = "#ffeb3b";
+            }
+        }
+
+        // --- Dice Spawning & Rearranging ---
+        function clearAllDice() {
+            activeDice.forEach(d => {
+                scene.remove(d.mesh);
+                world.removeBody(d.body);
+            });
+            activeDice = [];
+            document.getElementById('addDieBtn').disabled = true;
+            document.getElementById('removeDieBtn').disabled = true;
+        }
+
+        function spawnDie() {
+            if (!diceTemplateMesh || activeDice.length >= 3) return;
+
+            const mesh = diceTemplateMesh.clone();
+            mesh.traverse((child) => { if (child.isMesh) child.castShadow = true; });
+
+            const size = diceTemplateSize;
+            const boxShape = new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2));
+            const body = new CANNON.Body({
+                mass: 0,
+                type: CANNON.Body.STATIC,
+                material: diceMat,
+                linearDamping: 0.1,
+                angularDamping: 0.1
+            });
+            body.addShape(boxShape);
+
+            scene.add(mesh);
+            world.addBody(body);
+
+            activeDice.push({ mesh, body, isRolling: false, rollTimer: 0 });
+            rearrangeDice();
+
+            document.getElementById('addDieBtn').disabled = (activeDice.length >= 3);
+            document.getElementById('removeDieBtn').disabled = (activeDice.length <= 1);
+        }
+
+        function removeDie() {
+            if (activeDice.length <= 1) return;
+            const d = activeDice.pop();
+            scene.remove(d.mesh);
+            world.removeBody(d.body);
+            rearrangeDice();
+
+            document.getElementById('addDieBtn').disabled = (activeDice.length >= 3);
+            document.getElementById('removeDieBtn').disabled = (activeDice.length <= 1);
+        }
+
+        function rearrangeDice() {
+            const count = activeDice.length;
+            if (count === 1) {
+                activeDice[0].body.position.set(0, 5, 0);
+            } else if (count === 2) {
+                activeDice[0].body.position.set(-3, 5, 0);
+                activeDice[1].body.position.set(3, 5, 0);
+            } else if (count === 3) {
+                activeDice[0].body.position.set(-5, 5, 0);
+                activeDice[1].body.position.set(0, 5, 0);
+                activeDice[2].body.position.set(5, 5, 0);
+            }
+            activeDice.forEach(d => {
+                d.body.velocity.set(0, 0, 0);
+                d.body.angularVelocity.set(0, 0, 0);
+                d.body.type = CANNON.Body.STATIC;
+                d.body.mass = 0;
+                d.body.updateMassProperties();
+                
+                d.mesh.position.copy(d.body.position);
+                d.mesh.quaternion.copy(d.body.quaternion);
+            });
+        }
+
+        document.getElementById('addDieBtn').addEventListener('click', spawnDie);
+        document.getElementById('removeDieBtn').addEventListener('click', removeDie);
+
+        // --- Preload lulud6.glb ---
+        function preloadLulud6() {
+            const loader = new GLTFLoader();
+            loader.load('lulud6.glb', function (gltf) {
+                clearAllDice();
+
+                faceMap = [
+                    { value: "4", axis: new THREE.Vector3(0, 0, 1) },
+                    { value: "1", axis: new THREE.Vector3(0, 1, 0) },
+                    { value: "2", axis: new THREE.Vector3(-1, 0, 0) },
+                    { value: "3", axis: new THREE.Vector3(0, 0, -1) },
+                    { value: "5", axis: new THREE.Vector3(1, 0, 0) },
+                    { value: "6", axis: new THREE.Vector3(0, -1, 0) }
+                ];
+
+                isConfiguring = true;
+                isRollingAll = false;
+                updateUIState();
+                
+                const mesh = gltf.scene;
+                const box = new THREE.Box3().setFromObject(mesh);
+                const center = box.getCenter(new THREE.Vector3());
+                mesh.position.sub(center);
+
+                const wrapper = new THREE.Group();
+                wrapper.add(mesh);
+                
+                diceTemplateMesh = wrapper;
+                diceTemplateSize = box.getSize(new THREE.Vector3());
+
+                spawnDie();
+
+                document.getElementById('rollBtn').disabled = false;
+                document.getElementById('uploadConfig').disabled = false;
+                document.getElementById('saveConfigBtn').disabled = false;
+                
+                console.log("Preloaded lulud6.glb and applied baked-in face layout successfully.");
+            }, undefined, function (error) {
+                console.log("Auto-preload of lulud6.glb skipped/failed:", error.message);
+            });
+        }
+        preloadLulud6();
+
+        // --- Auto-Load Local JSON Config ---
+        async function attemptLocalConfigLoad() {
+            try {
+                const response = await fetch('dice_layout.json');
+                if (!response.ok) throw new Error("Local config not found or CORS blocked.");
+                const importedData = await response.json();
+
+                const clampedData = importedData.slice(0, MAX_FACES);
+                faceMap = clampedData.map(face => ({
+                    value: face.value,
+                    axis: new THREE.Vector3(face.axis.x, face.axis.y, face.axis.z)
+                }));
+                updateUIState();
+                console.log(`Auto-loaded local dice_layout.json successfully. (${faceMap.length} faces)`);
+            } catch (err) {
+                console.log("Local config auto-load skipped. Fallback upload active. Reason:", err.message);
+            }
+        }
+        setTimeout(() => {
+            if (faceMap.length === 0) {
+                attemptLocalConfigLoad();
+            }
+        }, 1000);
+
+        window.addEventListener('dblclick', (event) => {
+            if (activeDice.length === 0 || !isConfiguring) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const meshes = activeDice.map(d => d.mesh);
+            const intersects = raycaster.intersectObjects(meshes, true);
+            if (intersects.length > 0) {
+                const hitObject = intersects[0].object;
+                let clickedDie = null;
+                for (let d of activeDice) {
+                    let match = false;
+                    d.mesh.traverse(child => {
+                        if (child === hitObject) match = true;
+                    });
+                    if (match) {
+                        clickedDie = d;
+                        break;
+                    }
+                }
+                if (!clickedDie) return;
+
+                const faceNormal = intersects[0].face.normal.clone();
+                const normalMatrix = new THREE.Matrix3().getNormalMatrix(intersects[0].object.matrixWorld);
+                const worldNormal = faceNormal.applyMatrix3(normalMatrix).normalize();
+
+                const localNormal = worldNormal.transformDirection(clickedDie.mesh.matrixWorld.clone().invert()).normalize();
+
+                const existingIndex = faceMap.findIndex(f => f.axis.dot(localNormal) > 0.99);
+
+                if (existingIndex === -1 && faceMap.length >= MAX_FACES) {
+                    alert(`You have hit the maximum limit of ${MAX_FACES} mapped faces.`);
+                    return;
+                }
+
+                const promptText = existingIndex > -1 ? `Update mapped value for this face (currently ${faceMap[existingIndex].value}):` : "Assign new Pip Value for this face:";
+                const pipValue = prompt(promptText);
+
+                if (pipValue !== null && pipValue.trim() !== "") {
+                    if (existingIndex > -1) {
+                        faceMap[existingIndex].value = pipValue;
+                    } else {
+                        faceMap.push({ axis: localNormal, value: pipValue });
+                    }
+                    updateUIState();
+                }
+            }
+        });
+
+        // --- 4. File Handling (GLB and Manual Config) ---
+        document.getElementById('uploadGLB').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const fileNameClean = file.name.toLowerCase().replace('.glb', '');
+            const isAutoLayout = (fileNameClean === 'lulud6' || fileNameClean === 'dice1');
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const loader = new GLTFLoader();
+                loader.parse(event.target.result, '', function (gltf) {
+                    clearAllDice();
+
+                    if (isAutoLayout) {
+                        faceMap = [
+                            { value: "4", axis: new THREE.Vector3(0, 0, 1) },
+                            { value: "1", axis: new THREE.Vector3(0, 1, 0) },
+                            { value: "2", axis: new THREE.Vector3(-1, 0, 0) },
+                            { value: "3", axis: new THREE.Vector3(0, 0, -1) },
+                            { value: "5", axis: new THREE.Vector3(1, 0, 0) },
+                            { value: "6", axis: new THREE.Vector3(0, -1, 0) }
+                        ];
+                    } else {
+                        faceMap = [];
+                    }
+
+                    isConfiguring = true;
+                    isRollingAll = false;
+                    updateUIState();
+                    document.getElementById('result').innerText = "";
+                    document.getElementById('rollBtn').innerText = "ROLL DICE";
+                    document.getElementById('uploadConfig').disabled = false;
+
+                    const mesh = gltf.scene;
+                    const box = new THREE.Box3().setFromObject(mesh);
+                    const center = box.getCenter(new THREE.Vector3());
+                    mesh.position.sub(center);
+
+                    const wrapper = new THREE.Group();
+                    wrapper.add(mesh);
+                    
+                    diceTemplateMesh = wrapper;
+                    diceTemplateSize = box.getSize(new THREE.Vector3());
+
+                    spawnDie();
+                    
+                    document.getElementById('rollBtn').disabled = false;
+                    document.getElementById('addDieBtn').disabled = false;
+                    document.getElementById('removeDieBtn').disabled = true;
+
+                    controls.target.set(0, 5, 0);
+                    camera.position.set(0, 10, 15);
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        document.getElementById('saveConfigBtn').addEventListener('click', () => {
+            if (faceMap.length === 0) return;
+            const exportData = faceMap.map(face => ({
+                value: face.value,
+                axis: { x: face.axis.x, y: face.axis.y, z: face.axis.z }
+            }));
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "dice_layout.json";
+            link.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('uploadConfig').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    const clampedData = importedData.slice(0, MAX_FACES);
+
+                    faceMap = clampedData.map(face => ({
+                        value: face.value,
+                        axis: new THREE.Vector3(face.axis.x, face.axis.y, face.axis.z)
+                    }));
+                    updateUIState();
+                    alert(`Successfully loaded ${faceMap.length} faces from config!`);
+                } catch (err) {
+                    alert("Error reading config file. Make sure it's a valid JSON layout.");
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        });
+
+        // --- 5. Roll and Read Logic ---
+        document.getElementById('rollBtn').addEventListener('click', () => {
+            if (activeDice.length === 0) return;
+            if (faceMap.length === 0) {
+                alert("You need to map at least one face before you can roll.");
+                return;
+            }
+
+            isConfiguring = false;
+            isRollingAll = true;
+            document.getElementById('result').innerText = "Rolling...";
+            document.getElementById('result').style.color = "#888";
+            document.getElementById('rollBtn').innerText = "REROLL";
+
+            controls.target.set(0, 0, 0);
+
+            activeDice.forEach((d, idx) => {
+                d.isRolling = true;
+                d.rollTimer = 0;
+
+                d.body.type = CANNON.Body.DYNAMIC;
+                d.body.mass = 1;
+                d.body.updateMassProperties();
+                d.body.wakeUp();
+
+                const offsetX = (idx - (activeDice.length - 1) / 2) * 4;
+                d.body.position.set(offsetX, 12, (Math.random() - 0.5) * 3);
+                
+                d.body.velocity.set((Math.random() - 0.5) * 15, -10 - Math.random() * 5, (Math.random() - 0.5) * 15);
+                d.body.angularVelocity.set(
+                    (Math.random() - 0.5) * 40,
+                    (Math.random() - 0.5) * 40,
+                    (Math.random() - 0.5) * 40
+                );
+            });
+        });
+
+        // History Panel toggling & appending
+        window.toggleHistory = function() {
+            const container = document.getElementById('history-container');
+            const icon = document.getElementById('history-toggle-icon');
+            container.classList.toggle('collapsed');
+            if (container.classList.contains('collapsed')) {
+                icon.innerText = '◀';
+            } else {
+                icon.innerText = '▼';
+            }
+        };
+
+        function addRollToHistory(rollNum, results, isAllNumeric) {
+            const listEl = document.getElementById('history-list');
+            const placeholder = document.getElementById('history-placeholder');
+            if (placeholder) {
+                placeholder.remove();
+            }
+
+            let text = `Roll #${rollNum}: ${results.join(', ')}`;
+            if (isAllNumeric && results.length > 1) {
+                const sum = results.map(Number).reduce((a, b) => a + b, 0);
+                text += ` = <strong>${sum}</strong>`;
+            }
+
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = text;
+
+            listEl.insertBefore(item, listEl.firstChild);
+        }
+
+        const timeStep = 1 / 60;
+        function animate() {
+            requestAnimationFrame(animate);
+            world.step(timeStep);
+            controls.update();
+
+            activeDice.forEach(d => {
+                d.mesh.position.copy(d.body.position);
+                d.mesh.quaternion.copy(d.body.quaternion);
+
+                if (isRollingAll && d.isRolling) {
+                    d.rollTimer += timeStep;
+                    if (d.rollTimer > 0.6 && d.body.velocity.lengthSquared() < 0.1 && d.body.angularVelocity.lengthSquared() < 0.1) {
+                        d.isRolling = false;
+                    }
+                }
+            });
+
+            if (isRollingAll) {
+                const allStopped = activeDice.every(d => !d.isRolling);
+                if (allStopped) {
+                    isRollingAll = false;
+
+                    const results = [];
+                    let cockedFound = false;
+
+                    activeDice.forEach(d => {
+                        let bestMatch = -1;
+                        let winningValue = "?";
+                        const worldUp = new THREE.Vector3(0, 1, 0);
+
+                        faceMap.forEach(face => {
+                            const currentWorldAxis = face.axis.clone().transformDirection(d.mesh.matrixWorld).normalize();
+                            const dotProduct = currentWorldAxis.dot(worldUp);
+
+                            if (dotProduct > bestMatch) {
+                                bestMatch = dotProduct;
+                                winningValue = face.value;
+                            }
+                        });
+
+                        if (bestMatch > 0.5 && winningValue !== "?") {
+                            results.push(winningValue);
+                        } else {
+                            results.push("Cocked");
+                            cockedFound = true;
+                        }
+                    });
+
+                    const resultEl = document.getElementById('result');
+                    if (cockedFound) {
+                        resultEl.style.color = "#ffeb3b";
+                        resultEl.innerText = "Cocked (Reroll)";
+                    } else {
+                        const numericValues = results.map(val => Number(val));
+                        const isAllNumeric = numericValues.every(val => !isNaN(val));
+
+                        let resultStr = `Rolled: ${results.join(', ')}`;
+                        if (isAllNumeric && results.length > 1) {
+                            const sum = numericValues.reduce((a, b) => a + b, 0);
+                            resultStr += ` (Total: ${sum})`;
+                        }
+                        resultEl.style.color = "#4CAF50";
+                        resultEl.innerText = resultStr;
+
+                        rollCounter++;
+                        addRollToHistory(rollCounter, results, isAllNumeric);
+                    }
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+
+</html>

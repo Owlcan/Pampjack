@@ -1,0 +1,2197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Splat Worldspace Path Editor</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #111;
+            color: #fff;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        #ui-panel {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 10;
+            background: rgba(20, 20, 20, 0.85);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            width: 300px;
+            backdrop-filter: blur(5px);
+            border: 1px solid #333;
+        }
+
+        h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #007acc;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+
+        .control-group {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: #aaa;
+        }
+
+        button {
+            width: 100%;
+            padding: 8px;
+            background: #2b2b2b;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            margin-bottom: 5px;
+        }
+
+        button:hover {
+            background: #3b3b3b;
+            border-color: #666;
+        }
+
+        button.active {
+            background: #007acc;
+            border-color: #0098ff;
+        }
+
+        #mode-start {
+            border-color: #d9534f;
+            color: #d9534f;
+        }
+
+        #mode-start:hover {
+            background: #222;
+        }
+
+        #mode-start.active {
+            background: #d9534f;
+            border-color: #d9534f;
+            color: white;
+        }
+
+        input[type="number"],
+        input[type="file"] {
+            width: 100%;
+            padding: 6px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        #status {
+            font-size: 11px;
+            color: #00ff66;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+
+        .instructions {
+            font-size: 11px;
+            color: #bbb;
+            line-height: 1.4;
+            margin-top: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            border-radius: 4px;
+        }
+    </style>
+
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.153.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.153.0/examples/jsm/",
+          "@mkkellogg/gaussian-splats-3d": "https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.min.js"
+        }
+      }
+    </script>
+</head>
+
+<body>
+
+    <div id="ui-panel">
+        <h3>Splat Map Editor</h3>
+
+        <div class="control-group">
+            <label>1. Load Worldspace (.spz / .splat / .ply / .glb / .gltf)</label>
+            <input type="file" id="file-input" accept=".spz,.splat,.ply,.glb,.gltf">
+        </div>
+
+        <div class="control-group">
+            <label>Load Save File (layout.json)</label>
+            <input type="file" id="layout-input" accept=".json">
+        </div>
+
+        <div class="control-group">
+            <label>2. Align Floor Height (Y-Axis)</label>
+            <input type="number" id="floor-height" value="0.0" step="0.05">
+        </div>
+
+        <div class="control-group" style="display: flex; gap: 5px; margin-top: 5px;">
+            <button id="btn-floor-down" style="flex: 1; padding: 6px; font-size: 11px; margin-bottom: 0;">⬇️ Lower Floor (0.05)</button>
+            <button id="btn-floor-up" style="flex: 1; padding: 6px; font-size: 11px; margin-bottom: 0;">⬆️ Raise Floor (0.05)</button>
+        </div>
+
+        <div class="control-group" style="margin-top: 8px; display: flex; align-items: center;">
+            <input type="checkbox" id="chk-snap-ground" checked style="width: auto; margin: 0 6px 0 0; cursor: pointer;">
+            <label for="chk-snap-ground" style="margin: 0; font-size: 12px; cursor: pointer;">Snap to Worldspace Ground Topology</label>
+        </div>
+
+        <div class="control-group" style="margin-top: 8px; display: flex; align-items: center;">
+            <input type="checkbox" id="chk-mirror-world" style="width: auto; margin: 0 6px 0 0; cursor: pointer;" disabled>
+            <label for="chk-mirror-world" style="margin: 0; font-size: 12px; cursor: pointer; color: #9fd2ff;">Mirror Loaded GLB Across Seam</label>
+        </div>
+
+        <div class="control-group" style="margin-top: 6px; display: flex; gap: 6px; align-items: center;">
+            <label for="mirror-plane" style="margin: 0; font-size: 11px; color: #9fd2ff; min-width: 78px;">Mirror Plane</label>
+            <select id="mirror-plane" disabled style="flex: 1; padding: 6px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px;">
+                <option value="auto">Auto</option>
+                <option value="x-min">X Min Edge</option>
+                <option value="x-max">X Max Edge</option>
+                <option value="z-min">Z Min Edge</option>
+                <option value="z-max">Z Max Edge</option>
+            </select>
+        </div>
+
+        <div class="control-group" style="margin-top: 10px;">
+            <label>Ceiling Height (Y-Axis)</label>
+            <input type="number" id="ceiling-height" value="3.50" step="0.05">
+        </div>
+
+        <div class="control-group" style="display: flex; gap: 5px; margin-top: 5px;">
+            <button id="btn-ceiling-down" style="flex: 1; padding: 6px; font-size: 11px; margin-bottom: 0;">⬇️ Lower Ceiling (0.05)</button>
+            <button id="btn-ceiling-up" style="flex: 1; padding: 6px; font-size: 11px; margin-bottom: 0;">⬆️ Raise Ceiling (0.05)</button>
+        </div>
+
+        <div class="control-group" style="margin-top: 10px;">
+            <label>3. Player Start Y (Ground Level)</label>
+            <input type="number" id="player-start-y" value="0.00" step="0.05">
+        </div>
+
+        <div class="control-group" style="display: flex; gap: 5px; margin-top: 5px;">
+            <button id="btn-player-down" style="flex: 1; padding: 6px; font-size: 11px; margin-bottom: 0;">⬇️ Lower Start (0.05)</button>
+            <button id="btn-player-up" style="flex: 1; padding: 6px; font-size: 11px; margin-bottom: 0;">⬆️ Raise Start (0.05)</button>
+        </div>
+
+        <div class="control-group" id="spawn-height-group" style="display: none; margin-top: 10px;">
+            <label>Selected Spawn Y (Height)</label>
+            <input type="number" id="selected-spawn-y" value="0.00" step="0.05">
+            <div style="display: flex; gap: 5px; margin-top: 5px;">
+                <button id="btn-spawn-down" style="flex: 1; padding: 6px; font-size: 11px; margin-bottom: 0;">⬇️ Lower Spawn (0.05)</button>
+                <button id="btn-spawn-up" style="flex: 1; padding: 6px; font-size: 11px; margin-bottom: 0;">⬆️ Raise Spawn (0.05)</button>
+            </div>
+        </div>
+
+        <hr style="border-color:#333;">
+
+        <div class="control-group">
+            <label>4. Editor Modes</label>
+            <button id="mode-start">Place Player Start</button>
+            <button id="mode-spawn" class="active">Place Spawn Zones</button>
+            <button id="mode-path">Draw Paths</button>
+            <button id="mode-bounds">Define Playable Bounds</button>
+            <button id="mode-select" style="background: #553399; border-color: #553399;">✨ Select / Edit Elements</button>
+            <button id="btn-delete-selected" disabled style="width: 100%; margin-top: 8px; padding: 6px; font-size: 11px; background: #dc3545; border-color: #dc3545; color: white; font-weight: bold; opacity: 0.5;">🗑️ Delete Selected Object</button>
+        </div>
+
+        <div class="control-group" id="bounds-buttons-group" style="display: none; gap: 5px; margin-top: 5px; margin-bottom: 12px;">
+            <button id="btn-undo-bounds" style="flex: 1; padding: 6px; font-size: 11px; background: #333; border-color: #555; margin-bottom: 0;">↩️ Undo Vertex</button>
+            <button id="btn-clear-bounds" style="flex: 1; padding: 6px; font-size: 11px; background: #552222; border-color: #773333; margin-bottom: 0;">❌ Clear Bounds</button>
+        </div>
+
+        <div class="control-group" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center;">
+                <input type="checkbox" id="chk-lock-camera" style="width: auto; margin: 0 6px 0 0; cursor: pointer;">
+                <label for="chk-lock-camera" style="margin: 0; font-size: 12px; cursor: pointer; color: #ff00ff; font-weight: bold;">🔒 Lock Camera inside Bounds</label>
+            </div>
+            <button id="btn-reset-cam" style="padding: 6px; font-size: 11px; background: #333; border-color: #555; margin-bottom: 0;">🎥 Reset Camera to Start</button>
+        </div>
+
+        <div class="control-group">
+            <button id="btn-clear" style="color: #ff5555;">Clear Current Layout</button>
+            <button id="btn-export" style="background: #28a745; border-color: #28a745;">💾 Export layout.json</button>
+        </div>
+
+        <div id="status">Status: Waiting for file...</div>
+
+        <div class="instructions">
+            <strong>Controls:</strong><br>
+            • WASD / Arrows: Fly Camera<br>
+            • Q/E: Change Elevation<br>
+            • Shift (Hold): Speed Up Camera<br>
+            • Left-Click + Drag: Rotate Camera<br>
+            • Right-Click + Drag: Pan Camera<br>
+            • Left-Click on floor: Place Element / Boundary Vertex<br>
+            • Left-Click on Spawn Zone: Set Active
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d';
+
+        // --- State Management ---
+        let currentMode = 'spawn'; // 'spawn', 'path', or 'player_start'
+        let floorHeight = 0.0;
+        let mapData = {
+            floor_height: 0.0, // Ground height alignment coordinate
+            player_start: { x: 0.0, y: 0.0, z: 0.0 }, // default player ground level start point
+            playable_bounds: {
+                ceiling_height: 3.5, // default flat ceiling height (Y coordinate)
+                points: [] // vertices of the polygon
+            },
+            spawn_zones: [],
+            paths: {}
+        };
+        let activeSpawnId = null;
+        let loadedSplatBuffer = null;
+        let loadedWorldType = null;
+        let loadedGlbRoot = null;
+        let loadedGlbMirrorRoot = null;
+        let loadedWorldBounds = null;
+        let worldRaycastMeshes = [];
+
+        // Visual Object Collections
+        let spawnVisuals = [];
+        let pathLineVisuals = {};
+        let pathArrowVisuals = {};
+        let pathNodeVisuals = {};
+        let previewBoxMesh;
+        let playerStartVisual = null;
+        let shadowPlane = null;
+
+        // Boundary Visual Collections
+        let boundsVisualNodes = [];
+        let boundsVisualWall = null;
+        let boundsFloorOutline = null;
+        let boundsCeilingOutline = null;
+        let boundsCeilingGrid = null;
+
+        // Camera Lock State Vectors
+        let lastValidCameraPos = new THREE.Vector3();
+        let lastValidTargetPos = new THREE.Vector3();
+
+        // Selection & Dragging States
+        let selectedObject = null;
+        let selectedType = null; // 'spawn', 'path_node', 'bounds_node', 'player_start'
+        let draggedObject = null;
+        let draggedType = null;
+        let originalSelectedColor = null;
+
+        // --- Core Three.js Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        // Add soft lighting to support realistic shadows and standard materials
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.3);
+        dirLight.position.set(8, 20, 8);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        dirLight.shadow.bias = -0.0015;
+        scene.add(dirLight);
+
+        // --- Gaussian Splatting Viewer Initialization ---
+        // We initialize the viewer first to reuse its internal PerspectiveCamera.
+        // This ensures the custom splat shader and standard Three.js overlay rendering share the same camera matrix.
+        const viewer = new GaussianSplats3D.Viewer({
+            'selfContained': false,
+            'useBuiltInControls': false,
+            'rootElement': container,
+            'renderer': renderer,
+            'sharedMemoryForWorkers': false // <-- FIX: Disables strict SharedArrayBuffer requirement
+        });
+
+        // Configure the shared camera
+        const camera = viewer.camera;
+        camera.fov = 60;
+        camera.near = 0.1;
+        camera.far = 500;
+        camera.position.set(0, 5, 10);
+        camera.updateProjectionMatrix();
+
+        // Bind custom orbit controls directly to the shared camera
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // Setup custom holographic radial grid plane mesh
+        const gridGeo = new THREE.PlaneGeometry(150, 150);
+        gridGeo.rotateX(-Math.PI / 2);
+
+        const gridShaderMat = new THREE.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            uniforms: {
+                gridSize: { value: 1.0 },
+                gridColor: { value: new THREE.Color(0x007acc) },
+                fadeRadius: { value: 45.0 }
+            },
+            vertexShader: `
+                varying vec3 vWorldPosition;
+                void main() {
+                    vec4 worldPos = modelMatrix * vec4(position, 1.0);
+                    vWorldPosition = worldPos.xyz;
+                    gl_Position = projectionMatrix * viewMatrix * worldPos;
+                }
+            `,
+            fragmentShader: `
+                varying vec3 vWorldPosition;
+                uniform float gridSize;
+                uniform vec3 gridColor;
+                uniform float fadeRadius;
+                
+                void main() {
+                    vec2 grid = abs(fract(vWorldPosition.xz / gridSize - 0.5) - 0.5) / (fwidth(vWorldPosition.xz) / gridSize);
+                    float line = min(grid.x, grid.y);
+                    float c = 1.0 - min(line, 1.0);
+                    
+                    float dist = length(vWorldPosition.xz);
+                    float alpha = smoothstep(fadeRadius, fadeRadius * 0.45, dist);
+                    
+                    gl_FragColor = vec4(gridColor, c * alpha * 0.48);
+                }
+            `
+        });
+        const gridHelper = new THREE.Mesh(gridGeo, gridShaderMat);
+        gridHelper.position.y = floorHeight;
+        scene.add(gridHelper);
+
+        // Ceiling Grid Helper (Orange/Gold shader grid representing the ceiling limit)
+        const ceilingGridShaderMat = new THREE.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            uniforms: {
+                gridSize: { value: 1.0 },
+                gridColor: { value: new THREE.Color(0xff4444) }, // Red/magenta for warning limit
+                fadeRadius: { value: 45.0 }
+            },
+            vertexShader: gridShaderMat.vertexShader,
+            fragmentShader: gridShaderMat.fragmentShader
+        });
+        boundsCeilingGrid = new THREE.Mesh(gridGeo, ceilingGridShaderMat);
+        boundsCeilingGrid.position.y = mapData.playable_bounds.ceiling_height;
+        scene.add(boundsCeilingGrid);
+
+        // Shadow Receiver Plane (receives shadows cast by boxes/stands)
+        const shadowPlaneGeo = new THREE.PlaneGeometry(150, 150);
+        shadowPlaneGeo.rotateX(-Math.PI / 2);
+        const shadowPlaneMat = new THREE.ShadowMaterial({ opacity: 0.42 });
+        shadowPlane = new THREE.Mesh(shadowPlaneGeo, shadowPlaneMat);
+        shadowPlane.position.y = floorHeight;
+        shadowPlane.receiveShadow = true;
+        scene.add(shadowPlane);
+
+        // Invisible Plane Mesh for Raycasting (colorWrite: false keeps it raycastable but invisible)
+        const floorGeometry = new THREE.PlaneGeometry(100, 100);
+        floorGeometry.rotateX(-Math.PI / 2); // Make horizontal
+        const floorMaterial = new THREE.MeshBasicMaterial({ colorWrite: false });
+        const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
+        floorMesh.position.y = floorHeight;
+        scene.add(floorMesh);
+
+        // Setup Placement Preview Box Mesh (stands 0.5 units tall on floor)
+        const previewGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+        previewGeo.translate(0, 0.25, 0); // Origin at the center of the bottom face
+        const previewMat = new THREE.MeshBasicMaterial({
+            color: 0x00ffcc,
+            transparent: true,
+            opacity: 0.28,
+            depthWrite: false
+        });
+        previewBoxMesh = new THREE.Mesh(previewGeo, previewMat);
+        const previewEdges = new THREE.EdgesGeometry(previewGeo);
+        const previewLineMat = new THREE.LineBasicMaterial({ color: 0x00ffcc, linewidth: 2 });
+        const previewSegments = new THREE.LineSegments(previewEdges, previewLineMat);
+        previewBoxMesh.add(previewSegments);
+        previewBoxMesh.visible = false;
+        scene.add(previewBoxMesh);
+
+        // Raycasting & Mouse setup
+        const raycaster = new THREE.Raycaster();
+        const worldHeightRaycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const gltfLoader = new GLTFLoader();
+
+        // Render initial default Player Start helper
+        updatePlayerStartVisual();
+
+        const statusDiv = document.getElementById('status');
+        const mirrorWorldCheckbox = document.getElementById('chk-mirror-world');
+        const mirrorPlaneSelect = document.getElementById('mirror-plane');
+
+        function setMirrorToggleEnabled(enabled) {
+            mirrorWorldCheckbox.disabled = !enabled;
+            mirrorPlaneSelect.disabled = !enabled;
+            if (!enabled) {
+                mirrorWorldCheckbox.checked = false;
+                mirrorPlaneSelect.value = 'auto';
+            }
+        }
+
+        function disposeGlbRoot(root, options = {}) {
+            if (!root) return;
+
+            const { disposeGeometry = false, disposeMaterials = false } = options;
+            root.traverse((child) => {
+                if (!child.isMesh) return;
+
+                if (disposeGeometry && child.geometry) {
+                    child.geometry.dispose();
+                }
+
+                if (!disposeMaterials) return;
+
+                if (Array.isArray(child.material)) {
+                    child.material.forEach((material) => {
+                        if (material && typeof material.dispose === 'function') {
+                            material.dispose();
+                        }
+                    });
+                } else if (child.material && typeof child.material.dispose === 'function') {
+                    child.material.dispose();
+                }
+            });
+        }
+
+        function refreshGlbRaycastMeshes() {
+            worldRaycastMeshes = [];
+
+            [loadedGlbRoot, loadedGlbMirrorRoot].forEach((root) => {
+                if (!root) return;
+                root.traverse((child) => {
+                    if (child.isMesh) {
+                        worldRaycastMeshes.push(child);
+                    }
+                });
+            });
+        }
+
+        function getLowestUpwardFacingHit(hits) {
+            const upwardHits = hits.filter((hit) => isUpwardFacingSurface(hit));
+            const candidateHits = upwardHits.length > 0 ? upwardHits : hits;
+            if (!candidateHits.length) return null;
+
+            return candidateHits.reduce((lowestHit, hit) => {
+                return hit.point.y < lowestHit.point.y ? hit : lowestHit;
+            });
+        }
+
+        function estimateGlbFloorHeight(sampleCount = 12) {
+            if (!loadedWorldBounds || !worldRaycastMeshes.length) return floorHeight;
+
+            const min = loadedWorldBounds.min;
+            const max = loadedWorldBounds.max;
+            const maxY = max.y + 50;
+            const samples = [];
+
+            const xStep = sampleCount > 1 ? (max.x - min.x) / (sampleCount - 1) : 0;
+            const zStep = sampleCount > 1 ? (max.z - min.z) / (sampleCount - 1) : 0;
+
+            for (let xi = 0; xi < sampleCount; xi++) {
+                for (let zi = 0; zi < sampleCount; zi++) {
+                    const sampleX = sampleCount > 1 ? min.x + xStep * xi : (min.x + max.x) * 0.5;
+                    const sampleZ = sampleCount > 1 ? min.z + zStep * zi : (min.z + max.z) * 0.5;
+                    worldHeightRaycaster.set(
+                        new THREE.Vector3(sampleX, maxY, sampleZ),
+                        new THREE.Vector3(0, -1, 0)
+                    );
+
+                    const hits = worldHeightRaycaster.intersectObjects(worldRaycastMeshes, true);
+                    const lowestHit = getLowestUpwardFacingHit(hits);
+                    if (lowestHit) {
+                        samples.push(lowestHit.point.y);
+                    }
+                }
+            }
+
+            if (!samples.length) return floorHeight;
+            return Math.min(...samples);
+        }
+
+        function getGlbMirrorPlaneConfig() {
+            if (!loadedWorldBounds) {
+                return { axis: 'x', seam: 0, label: 'X seam @ 0.00' };
+            }
+
+            const { min, max } = loadedWorldBounds;
+            const planeValue = mirrorPlaneSelect.value;
+            if (planeValue !== 'auto') {
+                const [axis, side] = planeValue.split('-');
+                const seam = side === 'min' ? min[axis] : max[axis];
+                return {
+                    axis,
+                    seam,
+                    label: `${axis.toUpperCase()} ${side.toUpperCase()} @ ${seam.toFixed(2)}`
+                };
+            }
+
+            const xClosest = Math.abs(min.x) <= Math.abs(max.x)
+                ? { axis: 'x', seam: min.x, edge: 'MIN' }
+                : { axis: 'x', seam: max.x, edge: 'MAX' };
+            const zClosest = Math.abs(min.z) <= Math.abs(max.z)
+                ? { axis: 'z', seam: min.z, edge: 'MIN' }
+                : { axis: 'z', seam: max.z, edge: 'MAX' };
+
+            const xSpan = Math.abs(max.x - min.x);
+            const zSpan = Math.abs(max.z - min.z);
+            const chosen = xSpan >= zSpan ? xClosest : zClosest;
+
+            return {
+                axis: chosen.axis,
+                seam: chosen.seam,
+                label: `AUTO ${chosen.axis.toUpperCase()} ${chosen.edge} @ ${chosen.seam.toFixed(2)}`
+            };
+        }
+
+        function applyGlbMirrorState() {
+            if (loadedGlbMirrorRoot) {
+                scene.remove(loadedGlbMirrorRoot);
+                disposeGlbRoot(loadedGlbMirrorRoot, { disposeMaterials: true });
+                loadedGlbMirrorRoot = null;
+            }
+
+            if (!loadedGlbRoot || !mirrorWorldCheckbox.checked) {
+                refreshGlbRaycastMeshes();
+                return;
+            }
+
+            const mirrorPlane = getGlbMirrorPlaneConfig();
+            const mirrorRoot = loadedGlbRoot.clone(true);
+            const mirrorGroup = new THREE.Group();
+            mirrorGroup.position[mirrorPlane.axis] = mirrorPlane.seam * 2;
+            mirrorGroup.scale[mirrorPlane.axis] = -1;
+            mirrorGroup.add(mirrorRoot);
+            mirrorGroup.updateMatrixWorld(true);
+
+            mirrorRoot.traverse((child) => {
+                if (!child.isMesh) return;
+
+                if (Array.isArray(child.material)) {
+                    child.material = child.material.map((material) => {
+                        const clonedMaterial = material.clone();
+                        clonedMaterial.side = THREE.DoubleSide;
+                        return clonedMaterial;
+                    });
+                } else if (child.material) {
+                    child.material = child.material.clone();
+                    child.material.side = THREE.DoubleSide;
+                }
+
+                child.castShadow = true;
+                child.receiveShadow = true;
+            });
+
+            loadedGlbMirrorRoot = mirrorGroup;
+            scene.add(loadedGlbMirrorRoot);
+            refreshGlbRaycastMeshes();
+        }
+
+        function clearLoadedGlbWorldspace() {
+            if (!loadedGlbRoot) return;
+
+            scene.remove(loadedGlbRoot);
+            if (loadedGlbMirrorRoot) {
+                scene.remove(loadedGlbMirrorRoot);
+                disposeGlbRoot(loadedGlbMirrorRoot, { disposeMaterials: true });
+                loadedGlbMirrorRoot = null;
+            }
+
+            disposeGlbRoot(loadedGlbRoot, { disposeGeometry: true, disposeMaterials: true });
+
+            loadedGlbRoot = null;
+            loadedWorldBounds = null;
+            worldRaycastMeshes = [];
+            if (loadedWorldType === 'glb') {
+                loadedWorldType = null;
+            }
+
+            setMirrorToggleEnabled(false);
+        }
+
+        async function loadGlbWorldspace(fileURL) {
+            clearLoadedGlbWorldspace();
+
+            const gltf = await gltfLoader.loadAsync(fileURL);
+            const worldRoot = gltf.scene || gltf.scenes[0];
+            if (!worldRoot) {
+                throw new Error('GLB did not contain a scene.');
+            }
+
+            worldRoot.traverse((child) => {
+                if (!child.isMesh) return;
+
+                child.castShadow = true;
+                child.receiveShadow = true;
+            });
+
+            loadedGlbRoot = worldRoot;
+            refreshGlbRaycastMeshes();
+
+            if (worldRaycastMeshes.length === 0) {
+                throw new Error('GLB did not contain any mesh surfaces.');
+            }
+
+            loadedWorldBounds = new THREE.Box3().setFromObject(worldRoot);
+            loadedWorldType = 'glb';
+            scene.add(worldRoot);
+            setMirrorToggleEnabled(true);
+            applyGlbMirrorState();
+
+            floorHeight = estimateGlbFloorHeight();
+            floorHeightInput.value = floorHeight.toFixed(2);
+            updateYHeights();
+        }
+
+        mirrorWorldCheckbox.addEventListener('change', () => {
+            if (loadedWorldType !== 'glb' || !loadedGlbRoot) {
+                mirrorWorldCheckbox.checked = false;
+                return;
+            }
+
+            applyGlbMirrorState();
+            const mirrorPlane = getGlbMirrorPlaneConfig();
+            statusDiv.innerText = mirrorWorldCheckbox.checked
+                ? `Mirrored GLB worldspace enabled across ${mirrorPlane.label}.`
+                : 'Mirrored GLB worldspace disabled.';
+            statusDiv.style.color = '#9fd2ff';
+        });
+
+        mirrorPlaneSelect.addEventListener('change', () => {
+            if (loadedWorldType !== 'glb' || !loadedGlbRoot || !mirrorWorldCheckbox.checked) {
+                return;
+            }
+
+            applyGlbMirrorState();
+            const mirrorPlane = getGlbMirrorPlaneConfig();
+            statusDiv.innerText = `Mirrored GLB worldspace updated to ${mirrorPlane.label}.`;
+            statusDiv.style.color = '#9fd2ff';
+        });
+
+        document.getElementById('file-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const extension = file.name.split('.').pop()?.toLowerCase();
+            const isGlbWorld = extension === 'glb' || extension === 'gltf';
+
+            statusDiv.innerText = isGlbWorld ? "Loading GLB Worldspace..." : "Loading Splat Data...";
+            statusDiv.style.color = "#ffcc00";
+
+            const fileURL = URL.createObjectURL(file) + '#' + file.name;
+
+            try {
+                if (isGlbWorld) {
+                    await loadGlbWorldspace(fileURL);
+                    statusDiv.innerText = `Successfully Loaded GLB: ${file.name} | Auto Floor Y: ${floorHeight.toFixed(2)}`;
+                } else {
+                    clearLoadedGlbWorldspace();
+                    setMirrorToggleEnabled(false);
+                    await viewer.addSplatScene(fileURL, {
+                        'showLoadingUI': false
+                    });
+
+                    // --- FIX: Flip the splat right side up ---
+                    // Most inverted captures require a 180-degree rotation along the X or Z axis.
+                    // We get the last added splat mesh and rotate its internal scene group.
+                    const splatMesh = viewer.getSplatMesh();
+                    if (splatMesh) {
+                        // Try rotating 180 degrees (Math.PI) around the X-axis
+                        splatMesh.rotation.x = Math.PI;
+                        splatMesh.updateMatrixWorld(true);
+                        loadedSplatBuffer = splatMesh.splatBuffer;
+                        loadedWorldType = 'splat';
+                    }
+
+                    statusDiv.innerText = `Successfully Loaded: ${file.name}`;
+                }
+                statusDiv.style.color = "#00ff66";
+            } catch (err) {
+                statusDiv.innerText = `Error: ${err.message}`;
+                statusDiv.style.color = "#ff5555";
+            } finally {
+                URL.revokeObjectURL(fileURL.split('#')[0]);
+            }
+        });
+
+        // Load layout.json Save File
+        const layoutInput = document.getElementById('layout-input');
+        layoutInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const loadedData = JSON.parse(event.target.result);
+
+                    if (!loadedData.spawn_zones || !loadedData.paths) {
+                        alert("Invalid layout.json format! Missing spawn_zones or paths.");
+                        return;
+                    }
+
+                    // Clean selection state
+                    deselectCurrent();
+
+                    // Clean meshes from scene
+                    spawnVisuals.forEach(v => scene.remove(v));
+                    Object.values(pathNodeVisuals).forEach(arr => arr.forEach(v => scene.remove(v)));
+                    Object.values(pathLineVisuals).forEach(v => scene.remove(v));
+                    Object.values(pathArrowVisuals).forEach(arr => arr.forEach(v => scene.remove(v)));
+
+                    // Load mapData
+                    mapData = loadedData;
+
+                    // Ensure player_start is present
+                    if (!mapData.player_start) {
+                        mapData.player_start = { x: 0.0, y: 0.0, z: 0.0 };
+                    }
+
+                    // Ensure playable_bounds is present
+                    if (!mapData.playable_bounds) {
+                        mapData.playable_bounds = {
+                            ceiling_height: 3.5,
+                            points: []
+                        };
+                        
+                        // Generate a default 2D bounding polygon based on spawn zones
+                        if (mapData.spawn_zones.length > 0) {
+                            let minX = Infinity, maxX = -Infinity;
+                            let minZ = Infinity, maxZ = -Infinity;
+                            mapData.spawn_zones.forEach(z => {
+                                const r = z.radius !== undefined ? z.radius : 0.25;
+                                minX = Math.min(minX, z.position.x - r);
+                                maxX = Math.max(maxX, z.position.x + r);
+                                minZ = Math.min(minZ, z.position.z - r);
+                                maxZ = Math.max(maxZ, z.position.z + r);
+                            });
+                            // Add safety padding of 3.0 units
+                            minX -= 3.0; maxX += 3.0;
+                            minZ -= 3.0; maxZ += 3.0;
+
+                            mapData.playable_bounds.points = [
+                                { x: minX, z: minZ },
+                                { x: maxX, z: minZ },
+                                { x: maxX, z: maxZ },
+                                { x: minX, z: maxZ }
+                            ];
+                        } else {
+                            // Default 10x10 square around player start
+                            const px = mapData.player_start.x;
+                            const pz = mapData.player_start.z;
+                            mapData.playable_bounds.points = [
+                                { x: px - 5.0, z: pz - 5.0 },
+                                { x: px + 5.0, z: pz - 5.0 },
+                                { x: px + 5.0, z: pz + 5.0 },
+                                { x: px - 5.0, z: pz + 5.0 }
+                            ];
+                        }
+                    }
+
+                    if (mapData.playable_bounds.ceiling_height === undefined) {
+                        mapData.playable_bounds.ceiling_height = 3.5;
+                    }
+
+                    // Update ceiling UI input and grid helper position
+                    ceilingHeightInput.value = mapData.playable_bounds.ceiling_height.toFixed(2);
+                    if (boundsCeilingGrid) {
+                        boundsCeilingGrid.position.y = mapData.playable_bounds.ceiling_height;
+                    }
+
+                    // Reset variables
+                    spawnVisuals = [];
+                    pathNodeVisuals = {};
+                    pathLineVisuals = {};
+                    pathArrowVisuals = {};
+                    activeSpawnId = null;
+
+                    // Update Floor Y heights based on loaded data
+                    if (mapData.floor_height !== undefined) {
+                        floorHeight = mapData.floor_height;
+                    } else {
+                        // Backward compatibility calculation: convert old eye-level player start to ground level Y
+                        floorHeight = mapData.player_start.y - 1.6;
+                        mapData.player_start.y = floorHeight;
+                    }
+                    floorHeightInput.value = floorHeight.toFixed(2);
+                    playerStartYInput.value = mapData.player_start.y.toFixed(2);
+
+                    // Rebuild visuals (also calls rebuildPlayableBoundsVisuals internally)
+                    updateYHeights();
+
+                    // Recreate Spawn Zone Boxes
+                    mapData.spawn_zones.forEach(zone => {
+                        const radius = 0.25;
+                        const boxGeo = new THREE.BoxGeometry(radius * 2, 0.5, radius * 2);
+                        boxGeo.translate(0, 0.25, 0);
+                        const boxMat = new THREE.MeshStandardMaterial({
+                            color: 0x007acc, // Default to blue for inactive loaded boxes
+                            transparent: true,
+                            opacity: 0.45,
+                            roughness: 0.5,
+                            metalness: 0.1
+                        });
+                        const mesh = new THREE.Mesh(boxGeo, boxMat);
+                        mesh.position.set(zone.position.x, zone.position.y, zone.position.z);
+                        mesh.castShadow = true;
+                        mesh.receiveShadow = true;
+
+                        // Wireframe edges
+                        const edges = new THREE.EdgesGeometry(boxGeo);
+                        const lineMat = new THREE.LineBasicMaterial({ color: 0x007acc, linewidth: 2 });
+                        const lineSegments = new THREE.LineSegments(edges, lineMat);
+                        mesh.add(lineSegments);
+
+                        scene.add(mesh);
+                        spawnVisuals.push(mesh);
+                    });
+
+                    // Set last spawn zone as active
+                    if (mapData.spawn_zones.length > 0) {
+                        const lastIdx = mapData.spawn_zones.length - 1;
+                        activeSpawnId = mapData.spawn_zones[lastIdx].id;
+                        spawnVisuals[lastIdx].material.color.setHex(0xffaa00);
+                        spawnVisuals[lastIdx].children[0].material.color.setHex(0xffaa00);
+                    }
+
+                    // Recreate Path Nodes, Lines, and Arrows
+                    Object.keys(mapData.paths).forEach(pathId => {
+                        const spawnId = pathId.replace('path_from_', '');
+
+                        // Node spheres
+                        pathNodeVisuals[pathId] = [];
+                        mapData.paths[pathId].forEach(pt => {
+                            const geo = new THREE.SphereGeometry(0.15, 16, 16);
+                            const mat = new THREE.MeshBasicMaterial({ color: 0x28a745 });
+                            const mesh = new THREE.Mesh(geo, mat);
+                            mesh.position.set(pt.x, pt.y, pt.z);
+                            scene.add(mesh);
+                            pathNodeVisuals[pathId].push(mesh);
+                        });
+
+                        // Path connection lines
+                        const points = [];
+                        const zone = mapData.spawn_zones.find(z => z.id === spawnId);
+                        if (zone) points.push(new THREE.Vector3(zone.position.x, zone.position.y, zone.position.z));
+
+                        mapData.paths[pathId].forEach(pt => {
+                            points.push(new THREE.Vector3(pt.x, pt.y, pt.z));
+                        });
+
+                        const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+                        const lineMat = new THREE.LineBasicMaterial({ color: 0x28a745 });
+                        const line = new THREE.Line(lineGeo, lineMat);
+                        scene.add(line);
+                        pathLineVisuals[pathId] = line;
+
+                        // Path direction arrow helpers
+                        pathArrowVisuals[pathId] = [];
+                        for (let i = 0; i < points.length - 1; i++) {
+                            const start = points[i];
+                            const end = points[i+1];
+                            const dir = end.clone().sub(start).normalize();
+                            const mid = start.clone().add(end).multiplyScalar(0.5);
+                            const arrowHelper = new THREE.ArrowHelper(dir, mid.clone().sub(dir.clone().multiplyScalar(0.2)), 0.4, 0x28a745, 0.25, 0.15);
+                            scene.add(arrowHelper);
+                            pathArrowVisuals[pathId].push(arrowHelper);
+                        }
+                    });
+
+                    // Snap camera to player start position upon successful load
+                    resetCameraToPlayerStart();
+
+                    statusDiv.innerText = `Loaded save file successfully: ${file.name}`;
+                    statusDiv.style.color = "#00ff66";
+                } catch (err) {
+                    alert(`Failed to parse layout.json: ${err.message}`);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // Y-Axis and Ground Alignment Handlers
+        const floorHeightInput = document.getElementById('floor-height');
+        const playerStartYInput = document.getElementById('player-start-y');
+        const btnFloorDown = document.getElementById('btn-floor-down');
+        const btnFloorUp = document.getElementById('btn-floor-up');
+
+        function updateYHeights() {
+            gridHelper.position.y = floorHeight;
+            floorMesh.position.y = floorHeight;
+            if (shadowPlane) {
+                shadowPlane.position.y = floorHeight;
+            }
+            if (previewBoxMesh) {
+                previewBoxMesh.position.y = floorHeight;
+            }
+
+            // Save the adjusted floor height in mapData so it is exported in layout.json
+            mapData.floor_height = floorHeight;
+
+            // Re-render Player Start tripod with dynamic height post
+            updatePlayerStartVisual();
+
+            // Rebuild boundary visuals to align with new floor height
+            rebuildPlayableBoundsVisuals();
+        }
+
+        floorHeightInput.addEventListener('input', () => {
+            floorHeight = parseFloat(floorHeightInput.value) || 0;
+            updateYHeights();
+        });
+
+        playerStartYInput.addEventListener('input', () => {
+            mapData.player_start.y = parseFloat(playerStartYInput.value) || 0;
+            updateYHeights();
+        });
+
+        const btnPlayerDown = document.getElementById('btn-player-down');
+        const btnPlayerUp = document.getElementById('btn-player-up');
+
+        btnPlayerDown.addEventListener('click', () => {
+            let val = parseFloat(playerStartYInput.value) || 0;
+            val -= 0.05;
+            playerStartYInput.value = val.toFixed(2);
+            mapData.player_start.y = val;
+            updateYHeights();
+            statusDiv.innerText = `Lowered player start to Y: ${val.toFixed(2)}`;
+            statusDiv.style.color = "#00ff66";
+        });
+
+        btnPlayerUp.addEventListener('click', () => {
+            let val = parseFloat(playerStartYInput.value) || 0;
+            val += 0.05;
+            playerStartYInput.value = val.toFixed(2);
+            mapData.player_start.y = val;
+            updateYHeights();
+            statusDiv.innerText = `Raised player start to Y: ${val.toFixed(2)}`;
+            statusDiv.style.color = "#00ff66";
+        });
+
+        // Selected Spawn Zone Height Alignment Handlers
+        const selectedSpawnYInput = document.getElementById('selected-spawn-y');
+        const btnSpawnDown = document.getElementById('btn-spawn-down');
+        const btnSpawnUp = document.getElementById('btn-spawn-up');
+
+        function updateSelectedSpawnHeight(newY) {
+            if (!selectedObject || selectedType !== 'spawn') return;
+
+            const idx = spawnVisuals.indexOf(selectedObject);
+            if (idx !== -1) {
+                selectedObject.position.y = newY;
+                mapData.spawn_zones[idx].position.y = newY;
+
+                // Redraw any paths originating from this spawn zone
+                const zone = mapData.spawn_zones[idx];
+                zone.paths.forEach(pathId => {
+                    renderPathLine(pathId);
+                });
+
+                statusDiv.innerText = `Adjusted spawn zone Y height to: ${newY.toFixed(2)}`;
+                statusDiv.style.color = "#00ff66";
+            }
+        }
+
+        selectedSpawnYInput.addEventListener('input', () => {
+            const val = parseFloat(selectedSpawnYInput.value) || 0;
+            updateSelectedSpawnHeight(val);
+        });
+
+        btnSpawnDown.addEventListener('click', () => {
+            let val = parseFloat(selectedSpawnYInput.value) || 0;
+            val -= 0.05;
+            selectedSpawnYInput.value = val.toFixed(2);
+            updateSelectedSpawnHeight(val);
+        });
+
+        btnSpawnUp.addEventListener('click', () => {
+            let val = parseFloat(selectedSpawnYInput.value) || 0;
+            val += 0.05;
+            selectedSpawnYInput.value = val.toFixed(2);
+            updateSelectedSpawnHeight(val);
+        });
+
+        // Lower Floor (-0.05 units) button click
+        btnFloorDown.addEventListener('click', () => {
+            floorHeight -= 0.05;
+            floorHeightInput.value = floorHeight.toFixed(2);
+            updateYHeights();
+            statusDiv.innerText = `Lowered floor to Y: ${floorHeight.toFixed(2)}`;
+            statusDiv.style.color = "#00ff66";
+        });
+
+        // Raise Floor (+0.05 units) button click
+        btnFloorUp.addEventListener('click', () => {
+            floorHeight += 0.05;
+            floorHeightInput.value = floorHeight.toFixed(2);
+            updateYHeights();
+            statusDiv.innerText = `Raised floor to Y: ${floorHeight.toFixed(2)}`;
+            statusDiv.style.color = "#00ff66";
+        });
+
+
+
+        // Ceiling Height Alignment Handlers
+        const ceilingHeightInput = document.getElementById('ceiling-height');
+        const btnCeilingDown = document.getElementById('btn-ceiling-down');
+        const btnCeilingUp = document.getElementById('btn-ceiling-up');
+
+        function updateCeilingHeight() {
+            const val = parseFloat(ceilingHeightInput.value) || 3.5;
+            mapData.playable_bounds.ceiling_height = val;
+            if (boundsCeilingGrid) {
+                boundsCeilingGrid.position.y = val;
+            }
+            rebuildPlayableBoundsVisuals();
+        }
+
+        ceilingHeightInput.addEventListener('input', updateCeilingHeight);
+
+        btnCeilingDown.addEventListener('click', () => {
+            let val = parseFloat(ceilingHeightInput.value) || 3.5;
+            val -= 0.05;
+            ceilingHeightInput.value = val.toFixed(2);
+            updateCeilingHeight();
+            statusDiv.innerText = `Lowered ceiling to Y: ${val.toFixed(2)}`;
+            statusDiv.style.color = "#00ff66";
+        });
+
+        btnCeilingUp.addEventListener('click', () => {
+            let val = parseFloat(ceilingHeightInput.value) || 3.5;
+            val += 0.05;
+            ceilingHeightInput.value = val.toFixed(2);
+            updateCeilingHeight();
+            statusDiv.innerText = `Raised ceiling to Y: ${val.toFixed(2)}`;
+            statusDiv.style.color = "#00ff66";
+        });
+
+        // Initialize Y height values in visual models and UI panel
+        updateYHeights();
+
+        // Mode Toggles & UI updating
+        const startBtn = document.getElementById('mode-start');
+        const spawnBtn = document.getElementById('mode-spawn');
+        const pathBtn = document.getElementById('mode-path');
+        const boundsBtn = document.getElementById('mode-bounds');
+        const selectBtn = document.getElementById('mode-select');
+
+        function updateModeUI() {
+            startBtn.className = currentMode === 'player_start' ? 'active' : '';
+            spawnBtn.className = currentMode === 'spawn' ? 'active' : '';
+            pathBtn.className = currentMode === 'path' ? 'active' : '';
+            boundsBtn.className = currentMode === 'bounds' ? 'active' : '';
+            selectBtn.className = currentMode === 'select' ? 'active' : '';
+
+            // Show bounds tools only in bounds mode
+            document.getElementById('bounds-buttons-group').style.display = currentMode === 'bounds' ? 'flex' : 'none';
+
+            // Clean selection highlights when moving away from select mode
+            if (currentMode !== 'select') {
+                deselectCurrent();
+            }
+
+            if (previewBoxMesh) {
+                previewBoxMesh.visible = (currentMode === 'spawn');
+            }
+        }
+
+        startBtn.addEventListener('click', () => {
+            currentMode = 'player_start';
+            updateModeUI();
+        });
+
+        spawnBtn.addEventListener('click', () => {
+            currentMode = 'spawn';
+            updateModeUI();
+        });
+
+        pathBtn.addEventListener('click', () => {
+            if (mapData.spawn_zones.length === 0) {
+                alert("Please place at least one Spawn Zone before drawing paths!");
+                return;
+            }
+            currentMode = 'path';
+            updateModeUI();
+        });
+
+        boundsBtn.addEventListener('click', () => {
+            currentMode = 'bounds';
+            updateModeUI();
+        });
+
+        selectBtn.addEventListener('click', () => {
+            currentMode = 'select';
+            updateModeUI();
+        });
+
+        // Query splat point cloud to find local ground height at coordinates (targetX, targetZ)
+        function getSplatGroundHeight(targetX, targetZ, searchRadius = 0.8) {
+            const splatMesh = viewer.getSplatMesh();
+            if (!splatMesh) return floorHeight;
+
+            const count = splatMesh.getSplatCount();
+            if (count === 0) return floorHeight;
+
+            const pos = new THREE.Vector3();
+            const heights = [];
+
+            // Loop through splat centers (step by 8 for balance between accuracy and performance)
+            for (let i = 0; i < count; i += 8) {
+                // Fetch the center in world coordinates (true parameter maps local space to world space)
+                splatMesh.getSplatCenter(i, pos, true);
+
+                const dx = pos.x - targetX;
+                const dz = pos.z - targetZ;
+
+                // Check horizontal proximity
+                if (dx * dx + dz * dz < searchRadius * searchRadius) {
+                    // Restrict height search near the aligned baseline floor height to ignore ceilings/walls
+                    if (Math.abs(pos.y - floorHeight) < 2.5) {
+                        heights.push(pos.y);
+                    }
+                }
+            }
+
+            if (heights.length === 0) {
+                return floorHeight; // Fallback
+            }
+
+            // Return median to filter out sparse noise outliers
+            heights.sort((a, b) => a - b);
+            return heights[Math.floor(heights.length / 2)];
+        }
+
+        function isUpwardFacingSurface(hit, minUpDot = 0.2) {
+            if (!hit.face?.normal) return true;
+
+            const worldNormal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+            return worldNormal.dot(THREE.Object3D.DEFAULT_UP) >= minUpDot;
+        }
+
+        function getGlbGroundHeight(targetX, targetZ) {
+            if (!worldRaycastMeshes.length) return floorHeight;
+
+            const maxY = loadedWorldBounds ? loadedWorldBounds.max.y + 50 : floorHeight + 50;
+            worldHeightRaycaster.set(
+                new THREE.Vector3(targetX, maxY, targetZ),
+                new THREE.Vector3(0, -1, 0)
+            );
+
+            const hits = worldHeightRaycaster.intersectObjects(worldRaycastMeshes, true);
+            const lowestHit = getLowestUpwardFacingHit(hits);
+            return lowestHit ? lowestHit.point.y : floorHeight;
+        }
+
+        function getPlacementPointFromPointer(clientX, clientY) {
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const shouldSnapToWorld = document.getElementById('chk-snap-ground').checked;
+            const floorIntersects = raycaster.intersectObject(floorMesh);
+            if (!floorIntersects.length) {
+                return null;
+            }
+
+            const point = floorIntersects[0].point.clone();
+            if (!shouldSnapToWorld) {
+                point.y = floorHeight;
+                return point;
+            }
+
+            const splatMesh = viewer.getSplatMesh();
+            if (loadedWorldType === 'splat' && splatMesh && splatMesh.getSplatCount() > 0) {
+                point.y = getSplatGroundHeight(point.x, point.z);
+                return point;
+            }
+
+            if (loadedWorldType === 'glb') {
+                point.y = getGlbGroundHeight(point.x, point.z);
+                return point;
+            }
+
+            point.y = floorHeight;
+            return point;
+        }
+
+        // Math utility: Check if coordinate (x, z) is inside a 2D polygon defined by vertices list
+        function isPointInPolygon(x, z, points) {
+            if (points.length < 3) return true; // Can't form a polygon, don't restrict
+            let inside = false;
+            for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+                const xi = points[i].x, zi = points[i].z;
+                const xj = points[j].x, zj = points[j].z;
+                const intersect = ((zi > z) !== (zj > z)) &&
+                    (x < (xj - xi) * (z - zi) / (zj - zi + 0.00001) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        // Draggable object identification helper
+         function getDraggableObject(obj) {
+            if (!obj) return null;
+            
+            // Check if it belongs to player start visual group
+            if (playerStartVisual && (obj === playerStartVisual || obj.parent === playerStartVisual)) {
+                return { object: playerStartVisual, type: 'player_start' };
+            }
+            // Check if it is a spawn box stand or any of its children (wireframe, outlines, etc.)
+            let curr = obj;
+            while (curr && curr !== scene) {
+                const spawnIdx = spawnVisuals.indexOf(curr);
+                if (spawnIdx !== -1) {
+                    return { object: spawnVisuals[spawnIdx], type: 'spawn', index: spawnIdx };
+                }
+                curr = curr.parent;
+            }
+            // Check if it is a boundary vertex node sphere
+            const boundsIdx = boundsVisualNodes.indexOf(obj);
+            if (boundsIdx !== -1) {
+                return { object: obj, type: 'bounds_node', index: boundsIdx };
+            }
+            // Check if it is a path node sphere
+            for (const [pathId, meshes] of Object.entries(pathNodeVisuals)) {
+                const nodeIdx = meshes.indexOf(obj);
+                if (nodeIdx !== -1) {
+                    return { object: obj, type: 'path_node', pathId: pathId, index: nodeIdx };
+                }
+            }
+            return null;
+        }
+
+        // Track Pointer Move for Dragging and Spawn Zone Preview Box
+        container.addEventListener('pointermove', (e) => {
+            // 1. Handle hover pointer cursors on draggable meshes (only in select mode)
+            if (currentMode === 'select' && !draggedObject) {
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+
+                const candidates = [];
+                candidates.push(...spawnVisuals);
+                candidates.push(...boundsVisualNodes);
+                Object.values(pathNodeVisuals).forEach(arr => candidates.push(...arr));
+                if (playerStartVisual) {
+                    candidates.push(...playerStartVisual.children);
+                }
+
+                const intersects = raycaster.intersectObjects(candidates, true);
+                if (intersects.length > 0) {
+                    container.style.cursor = 'grab';
+                } else {
+                    container.style.cursor = 'default';
+                }
+            }
+
+            // 2. Handle active drag movement translations
+            if (draggedObject) {
+                const point = getPlacementPointFromPointer(e.clientX, e.clientY);
+
+                if (point) {
+
+                    // Apply translation based on element type
+                    if (draggedType === 'player_start') {
+                        mapData.player_start.x = point.x;
+                        mapData.player_start.z = point.z;
+                        mapData.player_start.y = point.y;
+                        playerStartYInput.value = point.y.toFixed(2);
+                        draggedObject.position.copy(point);
+                    } 
+                    else if (draggedType === 'spawn') {
+                        const idx = spawnVisuals.indexOf(draggedObject);
+                        if (idx !== -1) {
+                            mapData.spawn_zones[idx].position.x = point.x;
+                            mapData.spawn_zones[idx].position.y = point.y;
+                            mapData.spawn_zones[idx].position.z = point.z;
+                            draggedObject.position.copy(point);
+                            
+                            // Re-render any paths originating from this spawn zone
+                            const zone = mapData.spawn_zones[idx];
+                            zone.paths.forEach(pathId => {
+                                renderPathLine(pathId);
+                            });
+                        }
+                    }
+                    else if (draggedType === 'bounds_node') {
+                        const idx = boundsVisualNodes.indexOf(draggedObject);
+                        if (idx !== -1) {
+                            mapData.playable_bounds.points[idx].x = point.x;
+                            mapData.playable_bounds.points[idx].z = point.z;
+                            rebuildPlayableBoundsVisuals();
+
+                            // Rebuilding replaces the vertex meshes, so keep drag/selection
+                            // attached to the new sphere at the same polygon index.
+                            draggedObject = boundsVisualNodes[idx] || null;
+                            if (draggedObject) {
+                                draggedObject.material.color.setHex(0xffaa00);
+                                selectedObject = draggedObject;
+                                selectedType = 'bounds_node';
+                            }
+                        }
+                    }
+                    else if (draggedType === 'path_node') {
+                        let foundPathId = null;
+                        let foundNodeIdx = -1;
+                        for (const [pathId, meshes] of Object.entries(pathNodeVisuals)) {
+                            const idx = meshes.indexOf(draggedObject);
+                            if (idx !== -1) {
+                                foundPathId = pathId;
+                                foundNodeIdx = idx;
+                                break;
+                            }
+                        }
+                        if (foundPathId !== null && foundNodeIdx !== -1) {
+                            mapData.paths[foundPathId][foundNodeIdx].x = point.x;
+                            mapData.paths[foundPathId][foundNodeIdx].y = point.y;
+                            mapData.paths[foundPathId][foundNodeIdx].z = point.z;
+                            draggedObject.position.copy(point);
+                            renderPathLine(foundPathId);
+                        }
+                    }
+                }
+                return; // Skip normal placement preview
+            }
+
+            // 3. Fallback: Placement preview logic for spawn mode
+            if (currentMode !== 'spawn') {
+                if (previewBoxMesh) previewBoxMesh.visible = false;
+                return;
+            }
+
+            const point = getPlacementPointFromPointer(e.clientX, e.clientY);
+
+            if (point) {
+                if (previewBoxMesh) {
+                    previewBoxMesh.position.copy(point);
+                    previewBoxMesh.visible = true;
+                }
+            } else {
+                if (previewBoxMesh) previewBoxMesh.visible = false;
+            }
+        });
+
+        // --- Scene Clicking: Logic & Geometry Instantiation ---
+        let pointerDownPos = new THREE.Vector2();
+
+        container.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0) return; // Only Left Clicks
+            pointerDownPos.set(e.clientX, e.clientY);
+
+            // Raycast against all candidate objects to support click selection in any mode
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            // Collect all draggable candidate meshes
+            const candidates = [];
+            candidates.push(...spawnVisuals);
+            candidates.push(...boundsVisualNodes);
+            Object.values(pathNodeVisuals).forEach(arr => candidates.push(...arr));
+            if (playerStartVisual) {
+                candidates.push(...playerStartVisual.children);
+            }
+
+            const intersects = raycaster.intersectObjects(candidates, true);
+            if (intersects.length > 0) {
+                const draggable = getDraggableObject(intersects[0].object);
+                if (draggable) {
+                    deselectCurrent();
+
+                    selectedObject = draggable.object;
+                    selectedType = draggable.type;
+
+                    // Highlight selected in gold
+                    if (selectedType === 'spawn') {
+                        selectedObject.material.color.setHex(0xffaa00);
+                        selectedObject.children[0].material.color.setHex(0xffaa00);
+
+                        // Show Selected Spawn height adjustment panel
+                        const spawnHeightGrp = document.getElementById('spawn-height-group');
+                        if (spawnHeightGrp) spawnHeightGrp.style.display = 'block';
+                        const spawnYInp = document.getElementById('selected-spawn-y');
+                        if (spawnYInp) spawnYInp.value = selectedObject.position.y.toFixed(2);
+                    } else if (selectedType === 'bounds_node') {
+                        selectedObject.material.color.setHex(0xffaa00);
+                    } else if (selectedType === 'path_node') {
+                        selectedObject.material.color.setHex(0xffaa00);
+                    } else if (selectedType === 'player_start') {
+                        selectedObject.children[0].material.color.setHex(0xffaa00);
+                    }
+
+                    // Enable the delete button (except for player_start which is required)
+                    const deleteBtn = document.getElementById('btn-delete-selected');
+                    if (deleteBtn) {
+                        const isPlayerStart = (selectedType === 'player_start');
+                        deleteBtn.disabled = isPlayerStart;
+                        deleteBtn.style.opacity = isPlayerStart ? '0.5' : '1.0';
+                    }
+
+                    statusDiv.innerText = `Selected ${selectedType}: Click 'Delete' button or press Delete key to remove.`;
+                    statusDiv.style.color = "#ffaa00";
+
+                    // Drag-and-drop init (only allowed in select mode to prevent conflicts in placement modes)
+                    if (currentMode === 'select') {
+                        draggedObject = draggable.object;
+                        draggedType = draggable.type;
+                        controls.enabled = false;
+                        container.style.cursor = 'grabbing';
+                    }
+                }
+            } else {
+                deselectCurrent();
+            }
+        });
+
+        // Selection cleaner
+        function deselectCurrent() {
+            if (selectedObject) {
+                if (selectedType === 'spawn') {
+                    // Restore default blue colors
+                    selectedObject.material.color.setHex(0x007acc);
+                    selectedObject.children[0].material.color.setHex(0x007acc);
+                } else if (selectedType === 'bounds_node') {
+                    selectedObject.material.color.setHex(0xff00ff);
+                } else if (selectedType === 'path_node') {
+                    selectedObject.material.color.setHex(0x28a745);
+                } else if (selectedType === 'player_start') {
+                    // Restore default red sphere color
+                    selectedObject.children[0].material.color.setHex(0xff3333);
+                }
+            }
+            selectedObject = null;
+            selectedType = null;
+            originalSelectedColor = null;
+            
+            // Disable delete button
+            const deleteBtn = document.getElementById('btn-delete-selected');
+            if (deleteBtn) {
+                deleteBtn.disabled = true;
+                deleteBtn.style.opacity = '0.5';
+            }
+
+            // Hide Spawn Height Y controls
+            const spawnHeightGrp = document.getElementById('spawn-height-group');
+            if (spawnHeightGrp) {
+                spawnHeightGrp.style.display = 'none';
+            }
+        }
+
+        container.addEventListener('pointerup', (e) => {
+            if (e.button !== 0) return; // Only Left Clicks
+
+            // If we were dragging an object, terminate the drag operation and exit
+            if (draggedObject) {
+                draggedObject = null;
+                draggedType = null;
+                controls.enabled = true;
+                container.style.cursor = 'default';
+                return;
+            }
+
+            // Ignore if user was dragging camera (distance > 5px)
+            const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+            if (dist > 5) return;
+
+            // Calculate normalized pointer coordinates
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            // If an object was selected on pointerdown, bypass placement and handle mode actions
+            if (selectedObject) {
+                // In path drawing mode, clicking an existing spawn zone makes it the active spawn zone
+                if (currentMode === 'path' && selectedType === 'spawn') {
+                    const idx = spawnVisuals.indexOf(selectedObject);
+                    if (idx !== -1) {
+                        const zone = mapData.spawn_zones[idx];
+                        activeSpawnId = zone.id;
+                        statusDiv.innerText = `Active Spawn Zone set to: ${activeSpawnId}`;
+                        statusDiv.style.color = "#ffaa00";
+                        updateModeUI();
+                    }
+                }
+                return;
+            }
+
+            // Skip placement clicks in select mode
+            if (currentMode === 'select') {
+                return;
+            }
+
+            // 1. Raycast against spawn zone visual boxes first (only in path mode, or to select active zone)
+            const spawnIntersects = raycaster.intersectObjects(spawnVisuals, true);
+            if (spawnIntersects.length > 0) {
+                let obj = spawnIntersects[0].object;
+                while (obj.parent && obj.parent !== scene) {
+                    obj = obj.parent;
+                }
+                const idx = spawnVisuals.indexOf(obj);
+                if (idx !== -1) {
+                    const zone = mapData.spawn_zones[idx];
+                    activeSpawnId = zone.id;
+                    
+                    // Highlight the active spawn zone box (gold), reset others to blue
+                    spawnVisuals.forEach((vMesh, vIdx) => {
+                        const isCurrent = (vIdx === idx);
+                        vMesh.material.color.setHex(isCurrent ? 0xffaa00 : 0x007acc);
+                        vMesh.children[0].material.color.setHex(isCurrent ? 0xffaa00 : 0x007acc);
+                    });
+                    
+                    statusDiv.innerText = `Active Spawn Zone set to: ${activeSpawnId}`;
+                    statusDiv.style.color = "#ffaa00";
+                    updateModeUI();
+                    return;
+                }
+            }
+
+            // 2. Raycast against floor plane mesh for placement
+            const point = getPlacementPointFromPointer(e.clientX, e.clientY);
+            if (point) {
+
+                if (currentMode === 'spawn') {
+                    createSpawnZone(point);
+                } else if (currentMode === 'path') {
+                    if (activeSpawnId) {
+                        addPathNode(point);
+                    } else {
+                        alert("Please select or create a Spawn Zone first by clicking it!");
+                    }
+                } else if (currentMode === 'player_start') {
+                    mapData.player_start.x = point.x;
+                    mapData.player_start.z = point.z;
+                    mapData.player_start.y = point.y;
+                    playerStartYInput.value = mapData.player_start.y.toFixed(2);
+                    
+                    updatePlayerStartVisual();
+                    statusDiv.innerText = `Moved Player Start to: (${point.x.toFixed(2)}, ${mapData.player_start.y.toFixed(2)}, ${point.z.toFixed(2)})`;
+                    statusDiv.style.color = "#ff3333";
+                } else if (currentMode === 'bounds') {
+                    mapData.playable_bounds.points.push({ x: point.x, z: point.z });
+                    rebuildPlayableBoundsVisuals();
+                    statusDiv.innerText = `Added boundary vertex at: (${point.x.toFixed(2)}, ${point.z.toFixed(2)})`;
+                    statusDiv.style.color = "#00ff66";
+                }
+            }
+        });
+
+        // Boundary drawing actions
+        document.getElementById('btn-undo-bounds').addEventListener('click', () => {
+            if (mapData.playable_bounds.points.length > 0) {
+                const popped = mapData.playable_bounds.points.pop();
+                rebuildPlayableBoundsVisuals();
+                statusDiv.innerText = `Removed vertex: (${popped.x.toFixed(2)}, ${popped.z.toFixed(2)})`;
+                statusDiv.style.color = "#ffaa00";
+            }
+        });
+
+        document.getElementById('btn-clear-bounds').addEventListener('click', () => {
+            if (mapData.playable_bounds.points.length === 0) return;
+            if (!confirm("Are you sure you want to clear the boundary vertices?")) return;
+            mapData.playable_bounds.points = [];
+            rebuildPlayableBoundsVisuals();
+            statusDiv.innerText = "Boundary cleared.";
+            statusDiv.style.color = "#ff5555";
+        });
+
+        // Camera lock and reset event listeners
+        const lockCameraCheckbox = document.getElementById('chk-lock-camera');
+        lockCameraCheckbox.addEventListener('change', () => {
+            if (lockCameraCheckbox.checked) {
+                lastValidCameraPos.copy(camera.position);
+                lastValidTargetPos.copy(controls.target);
+            }
+        });
+
+        document.getElementById('btn-reset-cam').addEventListener('click', resetCameraToPlayerStart);
+
+        function updatePlayerStartVisual() {
+            if (playerStartVisual) {
+                scene.remove(playerStartVisual);
+            }
+
+            const startGroup = new THREE.Group();
+            
+            // Post height is visually fixed at 1.6 (standard eye level representation)
+            const postHeight = 1.6;
+
+            // 1. Red sphere representing player's eye/head camera (sitting at postHeight height)
+            const headGeo = new THREE.SphereGeometry(0.3, 24, 24);
+            const headMat = new THREE.MeshBasicMaterial({ color: 0xff3333 });
+            const headMesh = new THREE.Mesh(headGeo, headMat);
+            headMesh.position.set(0, postHeight, 0);
+            headMesh.castShadow = true; // Cast shadow on the floor!
+            startGroup.add(headMesh);
+
+            // 2. Directional nose cone pointing forward (negative Z axis)
+            const noseGeo = new THREE.ConeGeometry(0.1, 0.35, 12);
+            noseGeo.rotateX(Math.PI / 2); // Point forward
+            const noseMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const noseMesh = new THREE.Mesh(noseGeo, noseMat);
+            noseMesh.position.set(0, postHeight, -0.4);
+            startGroup.add(noseMesh);
+
+            // 3. Visual vertical post
+            const postGeo = new THREE.CylinderGeometry(0.03, 0.03, postHeight, 12);
+            postGeo.translate(0, postHeight / 2, 0); // Stand base at 0, top at postHeight
+            const postMat = new THREE.MeshBasicMaterial({ color: 0xff4444 });
+            const postMesh = new THREE.Mesh(postGeo, postMat);
+            postMesh.castShadow = true; // Cast shadow on the floor!
+            startGroup.add(postMesh);
+
+            // 4. Base stand ring on the ground Y position
+            const baseGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.04, 16);
+            const baseMat = new THREE.MeshBasicMaterial({ color: 0xff3333, transparent: true, opacity: 0.4 });
+            const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+            startGroup.add(baseMesh);
+
+            // Entire group is positioned at the actual player_start Y coordinate (which is the ground!)
+            startGroup.position.set(mapData.player_start.x, mapData.player_start.y, mapData.player_start.z);
+            scene.add(startGroup);
+            playerStartVisual = startGroup;
+        }
+
+        function rebuildPlayableBoundsVisuals() {
+            // 1. Clean up old visual objects
+            boundsVisualNodes.forEach(n => scene.remove(n));
+            boundsVisualNodes = [];
+
+            if (boundsVisualWall) {
+                scene.remove(boundsVisualWall);
+                boundsVisualWall = null;
+            }
+            if (boundsFloorOutline) {
+                scene.remove(boundsFloorOutline);
+                boundsFloorOutline = null;
+            }
+            if (boundsCeilingOutline) {
+                scene.remove(boundsCeilingOutline);
+                boundsCeilingOutline = null;
+            }
+
+            const points = mapData.playable_bounds.points;
+            const N = points.length;
+            if (N === 0) return;
+
+            // 2. Recreate visual nodes (small spheres) at each boundary vertex
+            const nodeGeo = new THREE.SphereGeometry(0.12, 16, 16);
+            const nodeMat = new THREE.MeshBasicMaterial({ color: 0xff00ff }); // Neon Pink
+
+            points.forEach(pt => {
+                const nodeMesh = new THREE.Mesh(nodeGeo, nodeMat);
+                nodeMesh.position.set(pt.x, floorHeight, pt.z);
+                scene.add(nodeMesh);
+                boundsVisualNodes.push(nodeMesh);
+            });
+
+            // 3. If there are 2 or more vertices, build the wall and line outlines!
+            if (N >= 2) {
+                const vertices = [];
+                const floorLinePts = [];
+                const ceilingLinePts = [];
+
+                for (let i = 0; i < N; i++) {
+                    const next = (i + 1) % N;
+                    const ptA = points[i];
+                    const ptB = points[next];
+
+                    // Segment floor and ceiling line outline points
+                    floorLinePts.push(new THREE.Vector3(ptA.x, floorHeight, ptA.z));
+                    ceilingLinePts.push(new THREE.Vector3(ptA.x, mapData.playable_bounds.ceiling_height, ptA.z));
+
+                    // Quad wall panels:
+                    // Triangle 1 (ptA bottom -> ptB bottom -> ptB top)
+                    vertices.push(ptA.x, floorHeight, ptA.z);
+                    vertices.push(ptB.x, floorHeight, ptB.z);
+                    vertices.push(ptB.x, mapData.playable_bounds.ceiling_height, ptB.z);
+
+                    // Triangle 2 (ptA bottom -> ptB top -> ptA top)
+                    vertices.push(ptA.x, floorHeight, ptA.z);
+                    vertices.push(ptB.x, mapData.playable_bounds.ceiling_height, ptB.z);
+                    vertices.push(ptA.x, mapData.playable_bounds.ceiling_height, ptA.z);
+                }
+
+                // Add start point back to close line outlines
+                floorLinePts.push(new THREE.Vector3(points[0].x, floorHeight, points[0].z));
+                ceilingLinePts.push(new THREE.Vector3(points[0].x, mapData.playable_bounds.ceiling_height, points[0].z));
+
+                // A. Extruded vertical wall mesh
+                const wallGeo = new THREE.BufferGeometry();
+                wallGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                const wallMat = new THREE.MeshBasicMaterial({
+                    color: 0xff00ff,
+                    transparent: true,
+                    opacity: 0.15,
+                    side: THREE.DoubleSide,
+                    depthWrite: false
+                });
+                boundsVisualWall = new THREE.Mesh(wallGeo, wallMat);
+                scene.add(boundsVisualWall);
+
+                // B. Line outlines
+                const floorLineGeo = new THREE.BufferGeometry().setFromPoints(floorLinePts);
+                const ceilingLineGeo = new THREE.BufferGeometry().setFromPoints(ceilingLinePts);
+                const outlineMat = new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 2 });
+
+                boundsFloorOutline = new THREE.Line(floorLineGeo, outlineMat);
+                boundsCeilingOutline = new THREE.Line(ceilingLineGeo, outlineMat);
+                scene.add(boundsFloorOutline);
+                scene.add(boundsCeilingOutline);
+            }
+        }
+
+        function resetCameraToPlayerStart() {
+            const px = mapData.player_start.x;
+            const py = mapData.player_start.y;
+            const pz = mapData.player_start.z;
+
+            // Camera placed at eye level (ground + 1.6)
+            camera.position.set(px, py + 1.6, pz);
+            // Orbit target placed 4 units straight forward (negative Z)
+            controls.target.set(px, py + 1.6, pz - 4.0);
+            controls.update();
+
+            // Set current valid position histories
+            lastValidCameraPos.copy(camera.position);
+            lastValidTargetPos.copy(controls.target);
+
+            statusDiv.innerText = "Camera snapped to Player Start.";
+            statusDiv.style.color = "#00ff66";
+        }
+
+        function createSpawnZone(position) {
+            const id = `spawn_${Date.now().toString(36)}`;
+            const radius = 0.25;
+
+            const zoneData = {
+                id: id,
+                position: { x: position.x, y: position.y, z: position.z },
+                radius: radius,
+                paths: []
+            };
+
+            mapData.spawn_zones.push(zoneData);
+            activeSpawnId = id; // Set as target origin for subsequent paths
+
+            // Reset colors of all previous spawn boxes to blue
+            spawnVisuals.forEach(vMesh => {
+                vMesh.material.color.setHex(0x007acc);
+                vMesh.children[0].material.color.setHex(0x007acc);
+            });
+
+            // Create Visual Anchor Box (stands on the floor)
+            const boxGeo = new THREE.BoxGeometry(radius * 2, 0.5, radius * 2);
+            boxGeo.translate(0, 0.25, 0); // Origin at center of bottom face
+            
+            // StandardMaterial supports environmental lights and casts realistic shadows
+            const boxMat = new THREE.MeshStandardMaterial({
+                color: 0xffaa00, // Gold for active
+                transparent: true,
+                opacity: 0.45,
+                roughness: 0.5,
+                metalness: 0.1
+            });
+            const mesh = new THREE.Mesh(boxGeo, boxMat);
+            mesh.position.copy(position);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+
+            // Wireframe Edges
+            const edges = new THREE.EdgesGeometry(boxGeo);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0xffaa00, linewidth: 2 });
+            const lineSegments = new THREE.LineSegments(edges, lineMat);
+            mesh.add(lineSegments);
+
+            scene.add(mesh);
+            spawnVisuals.push(mesh);
+
+            statusDiv.innerText = `Created ${id}. Ready to attach paths.`;
+            statusDiv.style.color = "#ffaa00";
+            updateModeUI();
+        }
+
+        function addPathNode(position) {
+            if (!activeSpawnId) return;
+
+            // Initialize path array for the active spawn point if it doesn't exist
+            const pathId = `path_from_${activeSpawnId}`;
+            if (!mapData.paths[pathId]) {
+                mapData.paths[pathId] = [];
+                // Attach reference key to origin Spawn Zone
+                const zone = mapData.spawn_zones.find(z => z.id === activeSpawnId);
+                if (zone && !zone.paths.includes(pathId)) zone.paths.push(pathId);
+            }
+
+            const nodePos = { x: position.x, y: position.y, z: position.z };
+            mapData.paths[pathId].push(nodePos);
+
+            // Visual Node Indicator
+            const geo = new THREE.SphereGeometry(0.15, 16, 16);
+            const mat = new THREE.MeshBasicMaterial({ color: 0x28a745 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.copy(position);
+            scene.add(mesh);
+            if (!pathNodeVisuals[pathId]) {
+                pathNodeVisuals[pathId] = [];
+            }
+            pathNodeVisuals[pathId].push(mesh);
+
+            // Redraw Connection Line Path
+            renderPathLine(pathId);
+        }
+
+        function renderPathLine(pathId) {
+            // Remove preexisting line segment if editing active stream
+            if (pathLineVisuals[pathId]) {
+                scene.remove(pathLineVisuals[pathId]);
+            }
+            // Remove preexisting direction arrows
+            if (pathArrowVisuals[pathId]) {
+                pathArrowVisuals[pathId].forEach(arr => scene.remove(arr));
+            }
+            pathArrowVisuals[pathId] = [];
+
+            const points = [];
+            // Origin point at the spawn zone center
+            const zone = mapData.spawn_zones.find(z => z.id === activeSpawnId);
+            if (zone) points.push(new THREE.Vector3(zone.position.x, zone.position.y, zone.position.z));
+
+            // Map trail coordinates
+            mapData.paths[pathId].forEach(pt => {
+                points.push(new THREE.Vector3(pt.x, pt.y, pt.z));
+            });
+
+            // Draw line
+            const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0x28a745 });
+            const line = new THREE.Line(lineGeo, lineMat);
+            scene.add(line);
+            pathLineVisuals[pathId] = line;
+
+            // Draw direction arrows along each segment (pointing in direction of travel)
+            for (let i = 0; i < points.length - 1; i++) {
+                const start = points[i];
+                const end = points[i+1];
+                const dir = end.clone().sub(start).normalize();
+                const len = start.distanceTo(end);
+
+                // Add an arrow helper at the midpoint of each segment pointing to destination
+                const mid = start.clone().add(end).multiplyScalar(0.5);
+                const arrowHelper = new THREE.ArrowHelper(dir, mid.clone().sub(dir.clone().multiplyScalar(0.2)), 0.4, 0x28a745, 0.25, 0.15);
+                scene.add(arrowHelper);
+                pathArrowVisuals[pathId].push(arrowHelper);
+            }
+        }
+
+        // --- Export & Cleardown Routines ---
+        document.getElementById('btn-export').addEventListener('click', () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(mapData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "layout.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        });
+
+        function deleteSelected() {
+            if (!selectedObject) return;
+
+            if (selectedType === 'spawn') {
+                const zoneIdx = spawnVisuals.indexOf(selectedObject);
+                if (zoneIdx !== -1) {
+                    const zone = mapData.spawn_zones[zoneIdx];
+                    
+                    scene.remove(selectedObject);
+                    spawnVisuals.splice(zoneIdx, 1);
+                    
+                    const pathId = `path_from_${zone.id}`;
+                    if (pathLineVisuals[pathId]) { scene.remove(pathLineVisuals[pathId]); delete pathLineVisuals[pathId]; }
+                    if (pathArrowVisuals[pathId]) { pathArrowVisuals[pathId].forEach(v => scene.remove(v)); delete pathArrowVisuals[pathId]; }
+                    if (pathNodeVisuals[pathId]) { pathNodeVisuals[pathId].forEach(v => scene.remove(v)); delete pathNodeVisuals[pathId]; }
+                    if (mapData.paths[pathId]) delete mapData.paths[pathId];
+
+                    mapData.spawn_zones.splice(zoneIdx, 1);
+                    if (activeSpawnId === zone.id) activeSpawnId = null;
+                    statusDiv.innerText = `Deleted Spawn Zone: ${zone.id}`;
+                    statusDiv.style.color = "#ff5555";
+                }
+            } 
+            else if (selectedType === 'bounds_node') {
+                const boundsIdx = boundsVisualNodes.indexOf(selectedObject);
+                if (boundsIdx !== -1) {
+                    scene.remove(selectedObject);
+                    boundsVisualNodes.splice(boundsIdx, 1);
+                    mapData.playable_bounds.points.splice(boundsIdx, 1);
+                    rebuildPlayableBoundsVisuals();
+                    statusDiv.innerText = `Deleted boundary vertex.`;
+                    statusDiv.style.color = "#ff5555";
+                }
+            } 
+            else if (selectedType === 'path_node') {
+                let foundPathId = null;
+                let foundNodeIdx = -1;
+                for (const [pathId, meshes] of Object.entries(pathNodeVisuals)) {
+                    const idx = meshes.indexOf(selectedObject);
+                    if (idx !== -1) {
+                        foundPathId = pathId;
+                        foundNodeIdx = idx;
+                        break;
+                    }
+                }
+                if (foundPathId !== null && foundNodeIdx !== -1) {
+                    scene.remove(selectedObject);
+                    pathNodeVisuals[foundPathId].splice(foundNodeIdx, 1);
+                    mapData.paths[foundPathId].splice(foundNodeIdx, 1);
+                    renderPathLine(foundPathId);
+                    statusDiv.innerText = `Deleted path node.`;
+                    statusDiv.style.color = "#ff5555";
+                }
+            }
+
+            deselectCurrent();
+            updateModeUI();
+        }
+
+        document.getElementById('btn-delete-selected').addEventListener('click', deleteSelected);
+
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            if (!confirm("Are you sure you want to clear your current layout?")) return;
+
+            // Clean selection state
+            deselectCurrent();
+
+            // Clean meshes from scene loop
+            spawnVisuals.forEach(v => scene.remove(v));
+            Object.values(pathNodeVisuals).forEach(arr => arr.forEach(v => scene.remove(v)));
+            Object.values(pathLineVisuals).forEach(v => scene.remove(v));
+            Object.values(pathArrowVisuals).forEach(arr => arr.forEach(v => scene.remove(v)));
+
+            // Reset state matrices
+            mapData = {
+                player_start: { x: 0.0, y: 0.0, z: 0.0 },
+                playable_bounds: {
+                    ceiling_height: 3.5,
+                    points: []
+                },
+                spawn_zones: [],
+                paths: {}
+            };
+            floorHeight = 0.0;
+            floorHeightInput.value = "0.00";
+            playerStartYInput.value = "0.00";
+            ceilingHeightInput.value = "3.50";
+            if (boundsCeilingGrid) {
+                boundsCeilingGrid.position.y = 3.5;
+            }
+
+            spawnVisuals = [];
+            pathNodeVisuals = {};
+            pathLineVisuals = {};
+            pathArrowVisuals = {};
+            activeSpawnId = null;
+
+            // Recreate default Player Start helper
+            updatePlayerStartVisual();
+
+            // Rebuild/Clear boundary visuals
+            rebuildPlayableBoundsVisuals();
+
+            // Revert interface state
+            currentMode = 'spawn';
+            updateModeUI();
+            statusDiv.innerText = "Layout cleared.";
+            statusDiv.style.color = "#ff5555";
+        });
+
+        const keysPressed = {};
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            keysPressed[key] = true;
+
+            // Delete selected element shortcut (works in any mode when an item is selected and not typing in inputs)
+            if (e.key === 'Delete' || e.key === 'Del') {
+                if (document.activeElement.tagName !== 'INPUT') {
+                    deleteSelected();
+                }
+            }
+
+            // Prevent default page scroll keys if they are not typing in a number/file input
+            if (['w', 's', 'a', 'd', 'q', 'e', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(key)) {
+                if (document.activeElement.tagName !== 'INPUT') {
+                    e.preventDefault();
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keysPressed[e.key.toLowerCase()] = false;
+        });
+
+        // Window Resizing Response
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- Application Main Render loop ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const delta = clock.getDelta();
+
+            // Keyboard Camera Movement Logic
+            let speed = 4.5; // Units per second (reduced from 12.0 for smoother feel)
+            if (keysPressed['shift']) {
+                speed = 10.0; // Sprint speed (reduced from 28.0)
+            }
+
+            const tempDir = new THREE.Vector3();
+            camera.getWorldDirection(tempDir);
+
+            // Project camera direction onto horizontal XZ plane for navigation
+            const forward = tempDir.clone();
+            forward.y = 0;
+            forward.normalize();
+
+            // Right vector perpendicular to camera horizontal direction
+            const right = new THREE.Vector3();
+            right.crossVectors(camera.up, forward).normalize();
+
+            const translation = new THREE.Vector3();
+
+            if (keysPressed['w'] || keysPressed['arrowup']) {
+                translation.addScaledVector(forward, speed * delta);
+            }
+            if (keysPressed['s'] || keysPressed['arrowdown']) {
+                translation.addScaledVector(forward, -speed * delta);
+            }
+            if (keysPressed['a'] || keysPressed['arrowleft']) {
+                translation.addScaledVector(right, -speed * delta);
+            }
+            if (keysPressed['d'] || keysPressed['arrowright']) {
+                translation.addScaledVector(right, speed * delta);
+            }
+            if (keysPressed['e']) {
+                translation.y += speed * delta;
+            }
+            if (keysPressed['q']) {
+                translation.y -= speed * delta;
+            }
+
+            if (translation.lengthSq() > 0) {
+                camera.position.add(translation);
+                controls.target.add(translation);
+            }
+
+            controls.update();
+
+            // Constrain camera and target bounds
+            const nextPos = camera.position.clone();
+            const nextTarget = controls.target.clone();
+
+            // 1. Constrain Y heights (elevation) between floorHeight + 0.1 and ceiling_height
+            const minCamY = floorHeight + 0.1;
+            const maxCamY = mapData.playable_bounds.ceiling_height;
+            nextPos.y = Math.max(minCamY, Math.min(maxCamY, nextPos.y));
+
+            const minTargetY = floorHeight;
+            const maxTargetY = mapData.playable_bounds.ceiling_height;
+            nextTarget.y = Math.max(minTargetY, Math.min(maxTargetY, nextTarget.y));
+
+            // 2. Check and enforce 2D polygon boundaries if lock checkbox is active
+            const lockCamera = document.getElementById('chk-lock-camera') && document.getElementById('chk-lock-camera').checked;
+            if (lockCamera && mapData.playable_bounds.points.length >= 3) {
+                // If camera position is inside, update it. Otherwise, revert to last valid X/Z coordinates.
+                if (isPointInPolygon(nextPos.x, nextPos.z, mapData.playable_bounds.points)) {
+                    camera.position.copy(nextPos);
+                    lastValidCameraPos.copy(camera.position);
+                } else {
+                    camera.position.x = lastValidCameraPos.x;
+                    camera.position.z = lastValidCameraPos.z;
+                    camera.position.y = nextPos.y; // Keep allowed elevation change
+                }
+
+                // If OrbitControls target is inside, update it. Otherwise, revert to last valid X/Z.
+                if (isPointInPolygon(nextTarget.x, nextTarget.z, mapData.playable_bounds.points)) {
+                    controls.target.copy(nextTarget);
+                    lastValidTargetPos.copy(controls.target);
+                } else {
+                    controls.target.x = lastValidTargetPos.x;
+                    controls.target.z = lastValidTargetPos.z;
+                    controls.target.y = nextTarget.y;
+                }
+            } else {
+                // Not locked, apply the standard Y-height constraints only
+                camera.position.copy(nextPos);
+                controls.target.copy(nextTarget);
+
+                // Save these as valid fallbacks in case lock is enabled later
+                lastValidCameraPos.copy(camera.position);
+                lastValidTargetPos.copy(controls.target);
+            }
+
+            // Fires renderer and handles internal splat system transformations
+            viewer.update();
+            viewer.render();
+
+            // Reset Three.js WebGL state cache to prevent corruption by the splat viewer's raw WebGL passes
+            renderer.resetState();
+
+            // Render standard Three.js overlay objects (grid, start indicator, boxes, lines, arrows) on top
+            renderer.autoClear = false;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+    </script>
+</body>
+
+</html>

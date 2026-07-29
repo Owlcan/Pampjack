@@ -1,0 +1,35 @@
+{
+  "name": "plushie-panic",
+  "version": "1.0.0",
+  "description": "Stationary 3D retro-cyberpunk turret shooter.",
+  "main": "Plushie Panic/main-electron.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "dist": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.lulu.plushiepanic",
+    "productName": "Plushie Panic",
+    "win": {
+      "target": "portable"
+    },
+    "files": [
+      "Plushie Panic/**/*",
+      "splorer/3D/slimepress.glb",
+      "splorer/3D-runtime/**/*",
+      "splorer/music and media/**/*",
+      "!**/node_modules/**/*",
+      "!dist/**/*",
+      "!Plushie Panic/dist/**/*",
+      "!Plushie Panic/node_modules/**/*",
+      "!Plushie Panic/package.json.bak",
+      "!Plushie Panic/package-lock.json.bak"
+    ],
+    "asar": true
+  }
+}

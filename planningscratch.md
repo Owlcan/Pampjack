@@ -293,3 +293,31 @@ pullthelever.mp3
 
 
 ===================================================================================
+
+## Dice Planning Additions
+
+### These are the default expression for the banker/dealer, they alternate between rounds.
+vae_neutral.webp
+vae_neutral1.webp
+
+### These are for after the dealer rolls.
+vae_boast3.webp
+vae_boast2.webp
+vae_boast1.webp
+vae_boast.webp
+
+### These are for draw/tie games.
+vae_draw1.webp
+vae_draw.webp
+
+### These are for after the banker/dealer loses.
+vae_loss.webp
+vae_loss1.webp
+vae_loss3.webp
+
+### These are for when the dealer wins:
+vae_win2.webp
+vae_win1.webp
+vae_win.webp
+
+Banker image should have its own little side window to the right, and shouls be a tall window.

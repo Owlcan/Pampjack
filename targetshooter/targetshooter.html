@@ -1,0 +1,2641 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lulu's Doll Roundup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --wood-dark: #2a160b;
+            --wood-light: #4b2e1b;
+            --felt-green: #0b4a22;
+            --gold: #d4af37;
+            --gold-light: #ffd700;
+            --text-color: #fce8b2;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'MedievalSharp', serif;
+            background: repeating-linear-gradient(45deg,
+                    var(--wood-dark),
+                    var(--wood-dark) 10px,
+                    var(--wood-light) 10px,
+                    var(--wood-light) 20px);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+            user-select: none;
+            position: relative;
+        }
+
+        h1 {
+            color: var(--gold-light);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            margin-top: 15px;
+            margin-bottom: 15px;
+            font-size: 2.5rem;
+            text-align: center;
+        }
+
+        .container {
+            background-color: var(--felt-green);
+            border: 6px solid var(--gold);
+            border-radius: 20px;
+            box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            width: 95%;
+            max-width: 1200px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* --- Game Selection Attract Cards --- */
+        .game-picker-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            justify-content: center;
+            justify-items: center;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        @media (min-width: 768px) {
+            .game-picker-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .game-card {
+            cursor: pointer;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 4px solid transparent;
+            opacity: 0.6;
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 280px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+        }
+
+        .game-card:hover {
+            opacity: 0.95;
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.8);
+        }
+
+        .game-card.active-game {
+            border-color: var(--gold-light);
+            box-shadow: 0 0 25px var(--gold-light);
+            opacity: 1;
+        }
+
+        .game-card.active-game:hover {
+            transform: none;
+            box-shadow: 0 0 25px var(--gold-light);
+        }
+
+        /* --- Setup Screen --- */
+        #setup-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px 0;
+            width: 100%;
+        }
+
+        .setup-group {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--gold);
+            text-align: center;
+            max-width: 500px;
+            box-sizing: border-box;
+        }
+
+        button {
+            font-family: 'MedievalSharp', serif;
+            background-color: var(--wood-dark);
+            color: var(--gold-light);
+            border: 2px solid var(--gold);
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--gold);
+            color: var(--wood-dark);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #777;
+            color: #777;
+        }
+
+        /* --- Canvas Window --- */
+        #game-window-container {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            z-index: 100;
+        }
+
+        #gameCanvas {
+            aspect-ratio: 2752 / 1536;
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+            cursor: crosshair;
+        }
+
+        /* --- In-Game HUD overlay --- */
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .hud-panel {
+            background: rgba(42, 22, 11, 0.85);
+            border: 3px solid var(--gold);
+            border-radius: 12px;
+            padding: 12px 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+            pointer-events: auto;
+            color: var(--text-color);
+        }
+
+        .hud-item {
+            font-size: 1.1rem;
+            margin: 4px 0;
+        }
+
+        .hud-value {
+            color: var(--gold-light);
+            font-weight: bold;
+        }
+
+        /* --- Custom Modals --- */
+        .modal {
+            position: absolute;
+            background: rgba(11, 74, 34, 0.95);
+            border: 5px solid var(--gold);
+            border-radius: 20px;
+            padding: 30px;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            z-index: 120;
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            box-sizing: border-box;
+        }
+
+        .modal-title {
+            font-size: 2.2rem;
+            color: var(--gold-light);
+            margin: 0;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        .modal-stats {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--gold);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: left;
+            font-size: 1.1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        /* --- Audio Controller Panel --- */
+        .audio-controller-panel {
+            position: absolute;
+            left: 20px;
+            bottom: 20px;
+            z-index: 1000;
+            background: rgba(42, 22, 11, 0.85);
+            border: 3px solid var(--gold);
+            border-radius: 12px;
+            padding: 8px 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-color);
+            font-family: 'MedievalSharp', serif;
+            pointer-events: auto;
+        }
+
+        .audio-controller-panel button {
+            font-family: 'MedievalSharp', serif;
+            background: rgba(0, 0, 0, 0.6);
+            color: var(--gold-light);
+            border: 1px solid var(--gold);
+            padding: 6px 12px;
+            font-size: 0.95rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .audio-controller-panel button:hover {
+            background-color: var(--gold);
+            color: var(--wood-dark);
+        }
+
+        .audio-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 80px;
+            height: 6px;
+            border-radius: 3px;
+            background: #553a26;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .audio-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--gold-light);
+            border: 1px solid var(--gold);
+            cursor: pointer;
+        }
+
+        /* --- Pause Overlay --- */
+        #pause-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            display: none;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 150;
+            box-sizing: border-box;
+        }
+
+        .pause-hud {
+            background: rgba(42, 22, 11, 0.9);
+            border: 4px solid var(--gold);
+            border-radius: 15px;
+            padding: 15px 30px;
+            margin-top: 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            color: var(--text-color);
+        }
+
+        .pause-footer {
+            margin-bottom: 40px;
+            display: flex;
+            gap: 20px;
+        }
+    </style>
+    <script src="../casinoSaveManager.js"></script>
+</head>
+
+<body>
+    <audio id="bg-music" src="../Casino Theme.mp3" loop></audio>
+    <div id="audio-panel" class="audio-controller-panel">
+        <button id="btn-audio" onclick="toggleAudio()">🎵 Play Music</button>
+        <input type="range" id="volume-slider" class="audio-slider" min="0" max="1" step="0.05" value="0.5"
+            oninput="adjustVolume(this.value)">
+    </div>
+
+    <h1 id="page-title">Lulu's Fantasy Casino</h1>
+
+    <div class="container" id="menu-container">
+        <!-- Save & Session Management Bar -->
+        <div id="save-session-bar" style="background: rgba(0, 0, 0, 0.4); border: 2px solid var(--gold); border-radius: 10px; padding: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; width: 100%; box-sizing: border-box; pointer-events: auto;">
+            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.1rem; color: var(--gold-light); font-weight: bold;">WALLET:</span>
+                    <span id="session-bankroll-display" style="font-size: 1.2rem; color: #fff; font-family: monospace; font-weight: bold; background: rgba(0,0,0,0.6); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--gold);">$200.00</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.1rem; color: var(--gold-light); font-weight: bold;">HIGH SCORE:</span>
+                    <span id="session-highscore-display" style="font-size: 1.2rem; color: #fff; font-family: monospace; font-weight: bold; background: rgba(0,0,0,0.6); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--gold);">0000</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button id="btn-adjust-funds" onclick="openAdjustmentModal()" style="padding: 6px 12px; font-size: 0.95rem; background-color: var(--wood-dark); margin: 0;">Adjust Wallet</button>
+                <button id="btn-export-session" onclick="CasinoSaveManager.exportSave()" style="padding: 6px 12px; font-size: 0.95rem; background-color: var(--wood-dark); margin: 0;">Export Save</button>
+                <button id="btn-import-session" onclick="document.getElementById('import-file-input').click()" style="padding: 6px 12px; font-size: 0.95rem; background-color: var(--wood-dark); margin: 0;">Import Save</button>
+                <input type="file" id="import-file-input" style="display: none;" onchange="handleSaveImport(event)">
+            </div>
+        </div>
+
+        <!-- Adjustment Modal -->
+        <div id="wallet-adjust-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 9999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+            <div class="setup-group" style="max-width: 400px; width: 90%; background-color: var(--felt-green); border: 4px solid var(--gold); padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                <h2 style="color: var(--gold-light); margin-top: 0;">Adjust Wallet Balance</h2>
+                <div style="margin-bottom: 15px; text-align: left;">
+                    <label style="display: block; margin-bottom: 5px; color: var(--gold-light);">Action:</label>
+                    <select id="adjust-action" style="width: 100%; box-sizing: border-box; background-color: var(--wood-dark); color: var(--gold-light); margin: 0;">
+                        <option value="add">Add Funds (Buy-in / Deposit)</option>
+                        <option value="remove">Remove Funds (Cash Out)</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 15px; text-align: left;">
+                    <label style="display: block; margin-bottom: 5px; color: var(--gold-light);">Amount ($):</label>
+                    <input type="number" id="adjust-amount" min="1" step="1" value="100" style="width: 100%; box-sizing: border-box; font-family: 'MedievalSharp', serif; background-color: var(--wood-dark); color: var(--gold-light); border: 2px solid var(--gold); padding: 8px; border-radius: 6px; font-size: 1.1rem;">
+                </div>
+                <div style="margin-bottom: 20px; text-align: left;">
+                    <label style="display: block; margin-bottom: 5px; color: var(--gold-light);">Optional Session Note:</label>
+                    <input type="text" id="adjust-note" placeholder="e.g. Bought more chips, cashed out" style="width: 100%; box-sizing: border-box; font-family: 'MedievalSharp', serif; background-color: var(--wood-dark); color: var(--gold-light); border: 2px solid var(--gold); padding: 8px; border-radius: 6px; font-size: 1.1rem;">
+                </div>
+                <div style="display: flex; gap: 15px; justify-content: space-between;">
+                    <button onclick="closeAdjustmentModal()" style="flex: 1; background-color: #333; border-color: #555; margin: 0; pointer-events: auto;">Cancel</button>
+                    <button onclick="submitAdjustment()" style="flex: 1; margin: 0; pointer-events: auto;">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="setup-screen">
+            <div class="game-picker-container">
+                <div class="game-card" onclick="switchGamePage('blackjack')">
+                    <img src="../deck of cards game/blackjackattract.webp" alt="Blackjack"
+                        style="width: 100%; display: block;">
+                </div>
+                <div class="game-card" onclick="switchGamePage('holdem')">
+                    <img src="../deck of cards game/holdemattract.webp" alt="Texas Hold'em"
+                        style="width: 100%; display: block;">
+                </div>
+                <div class="game-card" onclick="switchGamePage('slots')">
+                    <img src="../slots/slotmachineattract.webp" alt="Slots" style="width: 100%; display: block;">
+                </div>
+                <div class="game-card" onclick="switchGamePage('roulette')">
+                    <img src="../roulette/rouletteattract.webp" alt="Roulette" style="width: 100%; display: block;">
+                </div>
+                <div class="game-card" onclick="switchGamePage('ceelo')">
+                    <img src="../dice/ceeloattract.webp" alt="Cee-lo" style="width: 100%; display: block;">
+                </div>
+                <div class="game-card active-game" onclick="switchGamePage('targetshooter')">
+                    <img src="diaperdollroundupattract.webp" alt="Target Shooter" style="width: 100%; display: block;">
+                </div>
+            </div>
+
+            <div class="setup-group">
+                <h2 style="margin-top: 0; color: var(--gold-light);">Doll Roundup Gallery</h2>
+                <p style="line-height: 1.5; font-size: 1.1rem; margin-bottom: 20px;">
+                    Welcome to the Roundup Gallery! Click anywhere to shoot projectiles. Knock the dolls off their
+                    platforms!
+                    Dolls will vanish if missed within their lifetime. Hit enough targets to advance through the rounds!
+                </p>
+                <div id="load-status" style="font-size: 1rem; color: #aaa; margin-bottom: 15px;">Loading doll models...
+                </div>
+
+                <div style="margin-bottom: 20px; display: flex; gap: 15px; justify-content: center;">
+                    <button id="mode-normal-btn" onclick="setGameMode('normal')"
+                        style="background-color: var(--gold); color: var(--wood-dark);">Normal Gallery</button>
+                    <button id="mode-hard-btn" onclick="setGameMode('hard')"
+                        style="background-color: var(--wood-dark); color: var(--gold-light);">Hard Gallery</button>
+                </div>
+
+                <button id="start-btn" disabled>Start Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Game Layout -->
+    <div id="game-window-container">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="hud">
+            <div class="hud-panel">
+                <div class="hud-item">Round: <span id="hud-round" class="hud-value">1</span></div>
+                <div class="hud-item">Score: <span id="hud-score" class="hud-value">0</span></div>
+                <div class="hud-item">High Score: <span id="hud-highscore" class="hud-value">0</span></div>
+                <div id="hud-ammo-container" class="hud-item" style="margin-top: 8px; display: none;">
+                    Ammo: <span id="hud-ammo" class="hud-value">6 / 6</span>
+                    <button id="hud-reload-btn" onclick="reloadMagazine()"
+                        style="display: none; padding: 2px 8px; font-size: 0.85rem; margin-left: 10px; cursor: pointer; font-family: 'MedievalSharp', serif; background-color: var(--wood-dark); color: var(--gold-light); border: 1px solid var(--gold); border-radius: 4px;">Reload</button>
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
+                <div id="super-balls-panel" class="hud-panel"
+                    style="display: none; border-color: #00ffff; box-shadow: 0 0 15px #00ffff; align-items: center; justify-content: center; height: fit-content; padding: 6px 15px;">
+                    <div class="hud-item"
+                        style="color: #00ffff; font-weight: bold; text-shadow: 0 0 5px #00ffff; margin: 0;">⚡ SUPER
+                        PROJECTILES: <span id="super-timer">7.0</span>s</div>
+                </div>
+
+                <div id="speed-powerup-panel" class="hud-panel"
+                    style="display: none; border-color: #ffaa00; box-shadow: 0 0 15px #ffaa00; align-items: center; justify-content: center; height: fit-content; padding: 6px 15px;">
+                    <div class="hud-item"
+                        style="color: #ffaa00; font-weight: bold; text-shadow: 0 0 5px #ffaa00; margin: 0;">⚡ SPEED
+                        BURST: <span id="speed-timer">7.0</span>s</div>
+                </div>
+            </div>
+
+            <div class="hud-panel" style="text-align: right;">
+                <div class="hud-item">Spawns Left: <span id="hud-spawns" class="hud-value">10</span></div>
+                <div class="hud-item">Hits: <span id="hud-hits" class="hud-value">0 / 6</span></div>
+                <div style="margin-top: 8px; display: flex; gap: 8px; justify-content: flex-end; pointer-events: auto;">
+                    <button onclick="togglePause()"
+                        style="padding: 4px 10px; font-size: 0.9rem; cursor: pointer;">Pause</button>
+                    <button onclick="quitGame()"
+                        style="padding: 4px 10px; font-size: 0.9rem; cursor: pointer;">Quit</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pause Overlay -->
+        <div id="pause-overlay">
+            <div class="pause-hud">
+                <h2 class="modal-title" id="pause-title" style="margin-bottom: 5px;">Doll Gallery</h2>
+                <div id="pause-loaded-info"
+                    style="font-size: 1.4rem; color: var(--gold-light); margin-bottom: 5px; font-weight: bold;">
+                    <span id="gallery-doll-name">Doll Name</span>
+                </div>
+                <div id="pause-loaded-count" style="font-size: 1.0rem; color: #888; margin-bottom: 10px;">
+                    Doll 1 of 59 (Loaded)
+                </div>
+                <p id="pause-instructions"
+                    style="font-size: 0.95rem; color: #ccc; max-width: 400px; margin: 0 auto 10px;">
+                    Drag mouse to rotate doll. Press Arrow Keys to cycle.
+                </p>
+                <div
+                    style="display: flex; gap: 15px; justify-content: center; margin-bottom: 15px; pointer-events: auto;">
+                    <button onclick="prevGalleryDoll()"
+                        style="font-size: 1.1rem; padding: 6px 20px; font-family: 'MedievalSharp', serif; background-color: var(--wood-dark); color: var(--gold-light); border: 1px solid var(--gold); border-radius: 4px; cursor: pointer;">◀
+                        Previous</button>
+                    <button onclick="nextGalleryDoll()"
+                        style="font-size: 1.1rem; padding: 6px 20px; font-family: 'MedievalSharp', serif; background-color: var(--wood-dark); color: var(--gold-light); border: 1px solid var(--gold); border-radius: 4px; cursor: pointer;">Next
+                        ▶</button>
+                </div>
+
+                <!-- Custom adjustments container -->
+                <div
+                    style="display: none; margin-top: 10px; text-align: left; background: rgba(0,0,0,0.55); padding: 12px; border-radius: 6px; border: 1px solid var(--gold); max-width: 420px; margin-left: auto; margin-right: auto; pointer-events: auto;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 0.9rem; color: #ccc; font-weight: bold;">Global Brightness:</span>
+                        <input type="range" id="gallery-light-slider" min="0" max="8" step="0.1" value="2.5"
+                            oninput="updateGalleryLight(this.value)" style="width: 180px; cursor: pointer;">
+                        <span id="gallery-light-val"
+                            style="font-size: 0.9rem; color: var(--gold-light); min-width: 30px; text-align: right; font-weight: bold;">2.5</span>
+                    </div>
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 0.9rem; color: #ccc; font-weight: bold;">Rotation Y (deg):</span>
+                        <input type="range" id="gallery-rot-slider" min="-180" max="180" step="1" value="0"
+                            oninput="updateGalleryRotation(this.value)" style="width: 180px; cursor: pointer;">
+                        <span id="gallery-rot-val"
+                            style="font-size: 0.9rem; color: var(--gold-light); min-width: 30px; text-align: right; font-weight: bold;">0°</span>
+                    </div>
+                    <button id="toggle-spin-btn" onclick="toggleGallerySpin()"
+                        style="font-size: 1.0rem; padding: 4px 15px; font-family: 'MedievalSharp', serif; background-color: var(--wood-dark); color: var(--gold-light); border: 1px solid var(--gold); border-radius: 4px; cursor: pointer; width: 100%; display: block; margin-top: 8px;">⏸
+                        Pause Spin / Reset</button>
+                    <button onclick="testCurrentSettings()"
+                        style="font-size: 1.1rem; padding: 6px 20px; font-family: 'MedievalSharp', serif; background-color: var(--gold); color: var(--wood-dark); border: 1px solid var(--gold-light); border-radius: 4px; cursor: pointer; margin-top: 10px; font-weight: bold; width: 100%; display: block;">⚡
+                        Test in Gameplay</button>
+                    <div
+                        style="font-size: 0.8rem; color: #aaa; text-align: center; margin-top: 8px; font-weight: bold; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 6px;">
+                        Copy data to send to the developer:
+                    </div>
+                    <textarea id="doll-config-copy" readonly onclick="this.select()"
+                        style="width: 100%; height: 50px; font-family: monospace; font-size: 0.75rem; margin-top: 5px; background: #111; color: #0f0; border: 1px solid #444; padding: 4px; border-radius: 4px; box-sizing: border-box; resize: none; cursor: pointer;"></textarea>
+                </div>
+            </div>
+            <div class="pause-footer">
+                <button id="resume-btn" onclick="togglePause()" style="font-size: 1.3rem; padding: 10px 30px;">Resume
+                    Roundup</button>
+                <button id="exit-btn" onclick="quitGame()"
+                    style="font-size: 1.3rem; padding: 10px 30px; background-color: #333; border-color: #555;">Exit
+                    Gallery</button>
+            </div>
+        </div>
+
+        <!-- Round Start Overlay -->
+        <div id="round-start-overlay"
+            style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; z-index: 80; text-align: center;">
+            <div id="round-title-text"
+                style="font-size: 5rem; color: var(--gold-light); text-shadow: 0 0 20px #000, 3px 3px 0px #000; font-weight: bold; margin: 0;">
+                ROUND 1</div>
+            <div id="round-subtitle-text"
+                style="font-size: 2.5rem; color: #ffaa00; text-shadow: 0 0 10px #000, 2px 2px 0px #000; font-weight: bold; margin-top: 10px;">
+                GET READY!</div>
+        </div>
+
+        <!-- Round Clear Modal -->
+        <div id="round-clear-modal" class="modal">
+            <h2 class="modal-title">Round Clear!</h2>
+            <div class="modal-stats">
+                <div>Round completed: <span id="clear-round" class="hud-value">1</span></div>
+                <div>Round Hits: <span id="clear-hits" class="hud-value">0</span></div>
+                <div>Current Score: <span id="clear-score" class="hud-value">0</span></div>
+            </div>
+            <button onclick="nextRound()" style="font-size: 1.3rem;">Advance to Next Round</button>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div id="game-over-modal" class="modal">
+            <h2 class="modal-title" style="color: #ff4444;" id="game-over-title">Round Failed!</h2>
+            <div class="modal-stats">
+                <div>Failed on Round: <span id="over-round" class="hud-value">1</span></div>
+                <div>Hits scored: <span id="over-hits" class="hud-value">0</span></div>
+                <div>Target Hits: <span id="over-target" class="hud-value">6</span></div>
+                <div>Final Score: <span id="over-score" class="hud-value">0</span></div>
+                <div id="over-retries-container">Retries Left: <span id="over-retries" class="hud-value">3</span></div>
+            </div>
+            <button id="retry-btn" onclick="retryRound()" style="font-size: 1.3rem;">Retry Round</button>
+            <button onclick="quitGame()" style="font-size: 1.1rem; background-color: #333; border-color: #555;">Exit
+                Gallery</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+
+    <script>
+        // --- 1. Sound Synth System ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let isMusicPlaying = false;
+        const bgMusic = document.getElementById('bg-music');
+        bgMusic.volume = 0.5; // Match volume slider default value
+
+        function toggleAudio() {
+            const btn = document.getElementById('btn-audio');
+            if (isMusicPlaying) {
+                bgMusic.pause();
+                btn.innerText = '🎵 Play Music';
+                isMusicPlaying = false;
+            } else {
+                bgMusic.play().then(() => {
+                    btn.innerText = '🔇 Mute Music';
+                    isMusicPlaying = true;
+                }).catch(err => {
+                    console.log("Audio block:", err);
+                    alert("Please click on the page first, then enable music!");
+                });
+            }
+        }
+
+        function adjustVolume(val) {
+            bgMusic.volume = parseFloat(val);
+        }
+
+        function playShootSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(350, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(70, audioCtx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        function playHitSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            // Thud
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            osc1.frequency.setValueAtTime(140, audioCtx.currentTime);
+            osc1.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.12);
+            gain1.gain.setValueAtTime(0.35, audioCtx.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+            osc1.start();
+            osc1.stop(audioCtx.currentTime + 0.12);
+
+            // Ding
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(950, audioCtx.currentTime);
+            gain2.gain.setValueAtTime(0.18, audioCtx.currentTime);
+            gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.start();
+            osc2.stop(audioCtx.currentTime + 0.35);
+        }
+
+        function playShieldDeflectSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(150, audioCtx.currentTime + 0.2);
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(600, audioCtx.currentTime);
+
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.2);
+        }
+
+        function playBonusSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+            const notes = [523.25, 659.25, 783.99, 1046.50];
+            notes.forEach((freq, idx) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+                gain.gain.setValueAtTime(0.12, now + idx * 0.07);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.07 + 0.15);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now + idx * 0.07);
+                osc.stop(now + idx * 0.07 + 0.15);
+            });
+        }
+
+        function playWinSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+            const notes = [587.33, 739.99, 880.00, 1174.66];
+            notes.forEach((freq, idx) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+                gain.gain.setValueAtTime(0.15, now + idx * 0.12);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.12 + 0.4);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now + idx * 0.12);
+                osc.stop(now + idx * 0.12 + 0.4);
+            });
+        }
+
+        function playLoseSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+            const notes = [440.00, 392.00, 349.23, 293.66];
+            notes.forEach((freq, idx) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.15);
+                gain.gain.setValueAtTime(0.15, now + idx * 0.15);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.15 + 0.5);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now + idx * 0.15);
+                osc.stop(now + idx * 0.15 + 0.5);
+            });
+        }
+
+        function playReloadSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+
+            // First click
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            osc1.type = 'triangle';
+            osc1.frequency.setValueAtTime(150, now);
+            osc1.frequency.setValueAtTime(300, now + 0.05);
+            gain1.gain.setValueAtTime(0.15, now);
+            gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+            osc1.start(now);
+            osc1.stop(now + 0.1);
+
+            // Second click
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.type = 'triangle';
+            osc2.frequency.setValueAtTime(180, now + 0.15);
+            osc2.frequency.setValueAtTime(350, now + 0.2);
+            gain2.gain.setValueAtTime(0.15, now + 0.15);
+            gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.start(now + 0.15);
+            osc2.stop(now + 0.25);
+        }
+
+        function playEmptyClickSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.05);
+        }
+
+        // --- 3. Routing Helper ---
+        function switchGamePage(game) {
+            if (game === 'blackjack') {
+                window.location.href = '../index.html';
+            } else if (game === 'holdem') {
+                window.location.href = '../holdem.html';
+            } else if (game === 'slots') {
+                window.location.href = '../slots.html';
+            } else if (game === 'roulette') {
+                window.location.href = '../roulette.html';
+            } else if (game === 'ceelo') {
+                window.location.href = '../dice.html';
+            } else if (game === 'targetshooter') {
+                window.location.href = 'targetshooter.html';
+            }
+        }
+
+        // --- 4. Model Preloading System ---
+        const dollModelsList = [
+            'The Umbral Mother Under the Bed.glb',
+            'vaepupdoll.glb',
+            'stelladoll.glb',
+            'The Lunar Sharna.glb',
+            'silviedoll.glb',
+            'Sissy Ry.glb',
+            'possley.glb',
+            'sakipupdoll.glb',
+            'Niki.glb',
+            'poppydoll.glb',
+            'posiadoll.glb',
+            'natdoll.glb',
+            'Miss P.glb',
+            'Middy Doll.glb',
+            'millimdoll.glb',
+            'Maid Mayu.glb',
+            'liradoll.glb',
+            'lolodoll.glb',
+            'lunarsharna.glb',
+            'lira.glb',
+            'khana_dollsmol.glb',
+            'krinqilindoll1.glb',
+            'keek.glb',
+            'khanadoll.glb',
+            'karolinedoll.glb',
+            'kaskit.glb',
+            'jiradoll.glb',
+            'juliedoll.glb',
+            'freyadoll.glb',
+            'hexiadoll.glb',
+            'jackydoll.glb',
+            'flowerdiaperdoll.glb',
+            'flowerdiaperdoll1.glb',
+            'Denny.glb',
+            'cuppydoll.glb',
+            'Dark Maiden Scanty_00049_.glb',
+            'charla.glb',
+            'cuppercakedoll.glb',
+            'bufffairy.glb',
+            'beltizdoll.glb',
+            'blondiedoll.glb',
+            'Bashful Natasha.glb',
+            'babystardoll.glb',
+            'alunradoll.glb',
+            'anadoll.glb',
+            'ally.glb',
+            'alizadoll.glb',
+            'flare1.glb',
+            'kris.glb',
+            'Witch Uni.glb'
+        ];
+
+        const exemptDolls = ['diaperlyssadoll.glb', 'diaperdollstella.glb', 'saradiaperdoll.glb', 'kaskitdiaperdoll.glb'];
+        const customDollRotations = {
+            'diaperlyssadoll.glb': 1.5533,
+            'diaperdollstella.glb': 1.5533,
+            'saradiaperdoll.glb': 1.5533,
+            'kaskitdiaperdoll.glb': 1.5533
+        };
+        const customDollIntensity = {};
+        exemptDolls.forEach(d => {
+            customDollIntensity[d] = 2.5;
+        });
+        dollModelsList.forEach(d => {
+            if (customDollIntensity[d] === undefined) {
+                customDollIntensity[d] = 6.5;
+            }
+        });
+
+        const preloadedModels = {};
+        const loader = new THREE.GLTFLoader();
+
+        function preloadSmallModels(callback) {
+            const smallModels = ['diaperlyssadoll.glb', 'diaperdollstella.glb', 'saradiaperdoll.glb', 'kaskitdiaperdoll.glb'];
+            let count = 0;
+            const status = document.getElementById('load-status');
+
+            smallModels.forEach(filename => {
+                loader.load(filename, (gltf) => {
+                    // Apply stand-up rotation
+                    gltf.scene.rotation.y = Math.PI / 2;
+                    gltf.scene.rotation.x = 0;
+                    gltf.scene.rotation.z = 0;
+                    preloadedModels[filename] = gltf.scene;
+                    count++;
+                    status.innerText = `Loading models... (${count}/4 preloaded)`;
+                    if (count === smallModels.length) {
+                        status.innerText = "Minimum models preloaded! Ready to play.";
+                        callback();
+                        loadRemainingModels();
+                    }
+                }, undefined, (err) => {
+                    console.error("Fail model load:", filename, err);
+                    count++;
+                    if (count === smallModels.length) {
+                        status.innerText = "Preload completed with warnings.";
+                        callback();
+                        loadRemainingModels();
+                    }
+                });
+            });
+        }
+
+        function loadRemainingModels() {
+            const remaining = dollModelsList.filter(f => !preloadedModels[f]);
+            remaining.forEach(filename => {
+                loader.load(filename, (gltf) => {
+                    gltf.scene.rotation.y = Math.PI / 2;
+                    gltf.scene.rotation.x = 0;
+                    gltf.scene.rotation.z = 0;
+                    preloadedModels[filename] = gltf.scene;
+                }, undefined, (err) => {
+                    console.error("Error background loading:", filename, err);
+                });
+            });
+        }
+
+        // --- 5. Game Configuration & Targets ---
+        const targets = [
+            { name: "Rear Target 1", coords: [918, 517, 1053, 670], depth: -22, score: 300, activeDoll: null },
+            { name: "Rear Target 2", coords: [1118, 515, 1242, 673], depth: -22, score: 300, activeDoll: null },
+            { name: "Rear Target 3", coords: [1317, 513, 1437, 675], depth: -22, score: 300, activeDoll: null },
+            { name: "Rear Target 4", coords: [1514, 512, 1637, 676], depth: -22, score: 300, activeDoll: null },
+            { name: "Rear Target 5", coords: [1701, 511, 1837, 675], depth: -22, score: 300, activeDoll: null },
+            { name: "Middle Target 1", coords: [729, 559, 921, 799], depth: -14, score: 200, activeDoll: null },
+            { name: "Middle Target 2", coords: [1019, 558, 1192, 803], depth: -14, score: 200, activeDoll: null },
+            { name: "Middle Target 3", coords: [1295, 558, 1454, 800], depth: -14, score: 200, activeDoll: null },
+            { name: "Middle Target 4", coords: [1561, 556, 1734, 802], depth: -14, score: 200, activeDoll: null },
+            { name: "Middle Target 5", coords: [1828, 554, 2017, 799], depth: -14, score: 200, activeDoll: null },
+            { name: "Near Target 1", coords: [823, 689, 1108, 1027], depth: -7, score: 100, activeDoll: null },
+            { name: "Near Target 2", coords: [1253, 691, 1501, 1026], depth: -7, score: 100, activeDoll: null },
+            { name: "Near Target 3", coords: [1645, 689, 1927, 1030], depth: -7, score: 100, activeDoll: null }
+        ];
+
+        // --- 6. Graphic/Physics State Variables ---
+        let scene, camera, renderer, world;
+        let pauseScene, pauseCamera, pauseDollsGroup;
+        const dolls = [], balls = [];
+        let gameStarted = false, isPaused = false;
+        let currentGalleryIndex = 0;
+        let autoRotateGallery = true;
+
+        let currentRound = 1;
+        let currentScore = 0;
+        let highScore = window.CasinoSaveManager ? window.CasinoSaveManager.getHighScore('targetshooter') : parseInt(localStorage.getItem('roundup_highScore') || '0');
+
+        let roundHits = 0;
+        let hitsNeeded = 6;
+        let totalSpawnsStarted = 0;
+        let totalSpawnsProcessed = 0;
+
+        let currentDollLifetime = 5.0;
+        let spawnInterval = 1.3;
+        let maxActiveDolls = 2;
+        let lastSpawnTime = 0;
+
+        let superProjectilesActive = false;
+        let superProjectilesTime = 0.0;
+
+        let speedPowerUpActive = false;
+        let speedPowerUpTime = 0.0;
+
+        let isPreparingRound = false;
+        let prepareTimer = 0.0;
+
+        // Hard mode variables
+        let gameMode = 'normal';
+        let ammo = 6;
+        let maxAmmo = 6;
+        let isReloading = false;
+        let reloadTimer = 0.0;
+        let lastFireTime = 0.0;
+
+        // Special Screen-hopping Kaskit Doll spawning timer
+        let nextKaskitSpawnTime = 0.0;
+
+        // Detailed view state variables for pause screen
+        let isViewingDetail = false;
+        let selectedDetailGroup = null;
+        const selectedDetailOriginalPos = new THREE.Vector3();
+        let isDraggingDetail = false;
+        let previousMousePosition = { x: 0, y: 0 };
+
+        // Retries control
+        let retriesLeft = 3;
+
+        window.onload = function () {
+            if (window.CasinoSaveManager) {
+                highScore = CasinoSaveManager.getHighScore('targetshooter');
+            }
+            document.getElementById('hud-highscore').innerText = highScore;
+            const menuHigh = document.getElementById('session-highscore-display');
+            if (menuHigh) menuHigh.innerText = highScore;
+            setGameMode('normal');
+
+            preloadSmallModels(() => {
+                const startBtn = document.getElementById('start-btn');
+                startBtn.disabled = false;
+                startBtn.onclick = () => startGame();
+            });
+        };
+
+        function setGameMode(mode) {
+            gameMode = mode;
+            const normBtn = document.getElementById('mode-normal-btn');
+            const hardBtn = document.getElementById('mode-hard-btn');
+
+            if (mode === 'normal') {
+                normBtn.style.backgroundColor = 'var(--gold)';
+                normBtn.style.color = 'var(--wood-dark)';
+                hardBtn.style.backgroundColor = 'var(--wood-dark)';
+                hardBtn.style.color = 'var(--gold-light)';
+                document.getElementById('hud-ammo-container').style.display = 'none';
+                document.getElementById('hud-reload-btn').style.display = 'none';
+            } else {
+                hardBtn.style.backgroundColor = 'var(--gold)';
+                hardBtn.style.color = 'var(--wood-dark)';
+                normBtn.style.backgroundColor = 'var(--wood-dark)';
+                normBtn.style.color = 'var(--gold-light)';
+                document.getElementById('hud-ammo-container').style.display = 'inline-block';
+                document.getElementById('hud-reload-btn').style.display = 'inline-block';
+            }
+        }
+
+        function startGame() {
+            document.getElementById('page-title').style.display = 'none';
+            document.getElementById('menu-container').style.display = 'none';
+            document.getElementById('game-window-container').style.display = 'flex';
+
+            gameStarted = true;
+            retriesLeft = gameMode === 'hard' ? 1 : 3;
+
+            initGraphics();
+            initPhysics();
+            initRound();
+            animate();
+        }
+
+        function initGraphics() {
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(45, 2752 / 1536, 0.1, 100);
+            camera.position.set(0, 0, 10);
+            camera.lookAt(0, 0, 0);
+
+            const canvas = document.getElementById('gameCanvas');
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+
+            // Adjust canvas resolution dynamically based on screen size (supporting up to 2K width)
+            resizeCanvas();
+
+            // Set background range image
+            const textureLoader = new THREE.TextureLoader();
+            textureLoader.load('shootingrange.webp', (texture) => {
+                scene.background = texture;
+            });
+
+            // Lighting
+            const ambient = new THREE.AmbientLight(0xffffff, 0.95);
+            scene.add(ambient);
+            const directional = new THREE.DirectionalLight(0xffffff, 0.5);
+            directional.position.set(5, 5, 5);
+            scene.add(directional);
+        }
+
+        function resizeCanvas() {
+            const canvas = document.getElementById('gameCanvas');
+            const targetRatio = 2752 / 1536;
+            let w = window.innerWidth;
+            let h = window.innerHeight;
+
+            if (w / h > targetRatio) {
+                w = h * targetRatio;
+            } else {
+                h = w / targetRatio;
+            }
+
+            // Cap resolution size at 2K (2560px width)
+            if (w > 2560) {
+                w = 2560;
+                h = 2560 / targetRatio;
+            }
+
+            canvas.width = w;
+            canvas.height = h;
+
+            if (renderer) {
+                renderer.setSize(w, h);
+            }
+            if (camera) {
+                camera.aspect = targetRatio;
+                camera.updateProjectionMatrix();
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function initPhysics() {
+            world = new CANNON.World();
+            world.gravity.set(0, -22, 0);
+
+            // Static invisible platforms under the doll bounding areas
+            targets.forEach(t => {
+                const pMinX = t.coords[0];
+                const pMinY = t.coords[1];
+                const pMaxX = t.coords[2];
+                const pMaxY = t.coords[3];
+                const pCenterX = (pMinX + pMaxX) / 2;
+                const pCenterY = (pMinY + pMaxY) / 2;
+                const targetZ = t.depth;
+
+                // Calculate 3D bounds at targetZ depth
+                const leftPos = imageTo3D(pMinX, pCenterY, targetZ);
+                const rightPos = imageTo3D(pMaxX, pCenterY, targetZ);
+                const bottomPos = imageTo3D(pCenterX, pMaxY, targetZ);
+                const topPos = imageTo3D(pCenterX, pMinY, targetZ);
+
+                const width3D = leftPos.distanceTo(rightPos);
+                const height3D = bottomPos.distanceTo(topPos);
+
+                // Platforms are invisible, so we only add a static Cannon.js box
+                const platformBody = new CANNON.Body({
+                    mass: 0,
+                    position: new CANNON.Vec3(bottomPos.x, bottomPos.y - 0.05, bottomPos.z)
+                });
+                platformBody.addShape(new CANNON.Box(new CANNON.Vec3(width3D / 2, 0.05, width3D / 2)));
+                world.addBody(platformBody);
+                t.platformBody = platformBody;
+                t.width3D = width3D;
+                t.height3D = height3D;
+            });
+        }
+
+        function initRound() {
+            dolls.forEach(d => {
+                world.removeBody(d.body);
+                scene.remove(d.group);
+            });
+            dolls.length = 0;
+
+            balls.forEach(b => {
+                world.removeBody(b.body);
+                scene.remove(b.mesh);
+            });
+            balls.length = 0;
+
+            targets.forEach(t => t.activeDoll = null);
+
+            roundHits = 0;
+            totalSpawnsStarted = 0;
+            totalSpawnsProcessed = 0;
+
+            // Manage round start preparation and delayed spawns
+            isPreparingRound = true;
+            prepareTimer = 2.2;
+            document.getElementById('round-title-text').innerText = `ROUND ${currentRound}`;
+            document.getElementById('round-start-overlay').style.display = 'flex';
+
+            const nowTime = performance.now() / 1000;
+            lastSpawnTime = nowTime + 2.2;
+
+            // Schedule first Kaskit screen-hop doll spawn
+            nextKaskitSpawnTime = nowTime + 6.0 + Math.random() * 8.0;
+
+            // Progressive difficulty scaling based on game mode
+            if (gameMode === 'hard') {
+                // Hard mode: Dolls appear 35% less time to start, decrease further
+                currentDollLifetime = Math.max(0.45, 3.25 - (currentRound - 1) * 0.30);
+
+                // Hard mode: Dolls appear 20% more frequently
+                const baseInterval = Math.max(0.45, 1.4 - (currentRound - 1) * 0.05);
+                spawnInterval = baseInterval * 0.80;
+
+                // Reload system values
+                ammo = 6;
+                isReloading = false;
+                reloadTimer = 0.0;
+                lastFireTime = 0.0;
+            } else {
+                // Normal mode: Dolls stay on screen 20% less time than baseline
+                const baseLife = Math.max(0.75, 5.0 - (currentRound - 1) * 0.35);
+                currentDollLifetime = baseLife * 0.80;
+
+                // Normal mode: original spawn interval
+                spawnInterval = Math.max(0.45, 1.4 - (currentRound - 1) * 0.05);
+            }
+
+            maxActiveDolls = Math.min(5, 2 + Math.floor(currentRound / 3));
+            hitsNeeded = Math.min(9, 6 + Math.floor((currentRound - 1) / 2));
+
+            superProjectilesActive = false;
+            superProjectilesTime = 0;
+            document.getElementById('super-balls-panel').style.display = 'none';
+
+            speedPowerUpActive = false;
+            speedPowerUpTime = 0;
+            document.getElementById('speed-powerup-panel').style.display = 'none';
+
+            isPaused = false;
+            document.getElementById('round-clear-modal').style.display = 'none';
+            document.getElementById('game-over-modal').style.display = 'none';
+            document.getElementById('pause-overlay').style.display = 'none';
+
+            updateHUD();
+
+            if (clock) {
+                clock.getDelta(); // Consume accumulated delta time from paused modal screens
+            }
+        }
+
+        // --- 6. 2D Coordinate Projection Helpers ---
+        function imageTo3D(px, py, targetZ) {
+            const ndcX = (px / 2752) * 2 - 1;
+            const ndcY = 1 - (py / 1536) * 2;
+
+            const vector = new THREE.Vector3(ndcX, ndcY, 0.5);
+            vector.unproject(camera);
+
+            const dir = vector.sub(camera.position).normalize();
+            const t = (targetZ - camera.position.z) / dir.z;
+            return camera.position.clone().add(dir.multiplyScalar(t));
+        }
+
+        // Custom local space bounding box to handle skinned meshes and clone hierarchies without distortion
+        function getLocalBoundingBox(object) {
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+            let minZ = Infinity, maxZ = -Infinity;
+
+            object.updateMatrixWorld(true);
+            object.traverse(child => {
+                if (child.isMesh) {
+                    const geo = child.geometry;
+                    if (geo) {
+                        geo.computeBoundingBox();
+                        const box = geo.boundingBox;
+                        if (box) {
+                            const corners = [
+                                new THREE.Vector3(box.min.x, box.min.y, box.min.z),
+                                new THREE.Vector3(box.min.x, box.min.y, box.max.z),
+                                new THREE.Vector3(box.min.x, box.max.y, box.min.z),
+                                new THREE.Vector3(box.min.x, box.max.y, box.max.z),
+                                new THREE.Vector3(box.max.x, box.min.y, box.min.z),
+                                new THREE.Vector3(box.max.x, box.min.y, box.max.z),
+                                new THREE.Vector3(box.max.x, box.max.y, box.min.z),
+                                new THREE.Vector3(box.max.x, box.max.y, box.max.z)
+                            ];
+
+                            corners.forEach(corner => {
+                                corner.applyMatrix4(child.matrix);
+                                if (corner.x < minX) minX = corner.x;
+                                if (corner.x > maxX) maxX = corner.x;
+                                if (corner.y < minY) minY = corner.y;
+                                if (corner.y > maxY) maxY = corner.y;
+                                if (corner.z < minZ) minZ = corner.z;
+                                if (corner.z > maxZ) maxZ = corner.z;
+                            });
+                        }
+                    }
+                }
+            });
+
+            if (minX === Infinity) {
+                return new THREE.Box3(new THREE.Vector3(-0.5, -0.8, -0.25), new THREE.Vector3(0.5, 0.8, 0.25));
+            }
+            return new THREE.Box3(new THREE.Vector3(minX, minY, minZ), new THREE.Vector3(maxX, maxY, maxZ));
+        }
+
+        function getDollScreenBoundingBox(group) {
+            group.updateMatrixWorld(true);
+            const box = new THREE.Box3().setFromObject(group);
+            const corners = [];
+            for (let x of [box.min.x, box.max.x]) {
+                for (let y of [box.min.y, box.max.y]) {
+                    for (let z of [box.min.z, box.max.z]) {
+                        corners.push(new THREE.Vector3(x, y, z));
+                    }
+                }
+            }
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            corners.forEach(corner => {
+                corner.project(camera);
+                const screenX = (corner.x * 0.5 + 0.5) * 2752;
+                const screenY = (1 - (corner.y * 0.5 + 0.5)) * 1536;
+                if (screenX < minX) minX = screenX;
+                if (screenX > maxX) maxX = screenX;
+                if (screenY < minY) minY = screenY;
+                if (screenY > maxY) maxY = screenY;
+            });
+            return { minX, minY, maxX, maxY };
+        }
+
+        function getOverlapPercentage(D, P) {
+            const intersectMinX = Math.max(D.minX, P.minX);
+            const intersectMaxX = Math.min(D.maxX, P.maxX);
+            const intersectMinY = Math.max(D.minY, P.minY);
+            const intersectMaxY = Math.min(D.maxY, P.maxY);
+
+            if (intersectMaxX <= intersectMinX || intersectMaxY <= intersectMinY) {
+                return 0;
+            }
+
+            const intersectArea = (intersectMaxX - intersectMinX) * (intersectMaxY - intersectMinY);
+            const dollArea = (D.maxX - D.minX) * (D.maxY - D.minY);
+
+            if (dollArea <= 0) return 0;
+            return intersectArea / dollArea;
+        }
+
+        function flashShield(shieldMesh) {
+            if (!shieldMesh) return;
+            const origColor = shieldMesh.material.color.getHex();
+            shieldMesh.material.color.setHex(0xffffff);
+            shieldMesh.scale.multiplyScalar(1.15);
+            setTimeout(() => {
+                if (shieldMesh && shieldMesh.material) {
+                    shieldMesh.material.color.setHex(origColor);
+                    shieldMesh.scale.multiplyScalar(1 / 1.15);
+                }
+            }, 80);
+        }
+
+        // --- 7. Doll Spawning Logic ---
+        function spawnDoll(forcedKey) {
+            const emptyPlatforms = targets.filter(t => !t.activeDoll);
+            if (emptyPlatforms.length === 0) return;
+            const platform = emptyPlatforms[Math.floor(Math.random() * emptyPlatforms.length)];
+
+            // Filter out Kaskit doll from platform-based spawning rotation
+            const standardKeys = Object.keys(preloadedModels).filter(k => k !== 'kaskitdiaperdoll.glb');
+            if (standardKeys.length === 0) return;
+            const randKey = forcedKey || standardKeys[Math.floor(Math.random() * standardKeys.length)];
+            const dollMesh = preloadedModels[randKey].clone();
+
+            // Center child model inside parent Group using our custom local bounding box
+            const localBox = getLocalBoundingBox(dollMesh);
+            const localSize = new THREE.Vector3();
+            const localCenter = new THREE.Vector3();
+            localBox.getSize(localSize);
+            localBox.getCenter(localCenter);
+
+            const theta = customDollRotations[randKey] !== undefined ? customDollRotations[randKey] : 0.0;
+            if (!isNaN(localCenter.x) && !isNaN(localCenter.y) && !isNaN(localCenter.z)) {
+                // Rotate the doll to theta while keeping its visual center
+                // at the exact same platform position by compensating for the rotated center offset:
+                const rotatedOrig = localCenter.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+                const rotatedNew = localCenter.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), theta);
+                dollMesh.position.copy(rotatedOrig).sub(rotatedNew).sub(localCenter);
+            }
+
+            // Set rotation to theta
+            dollMesh.rotation.y = theta;
+
+            const parentGroup = new THREE.Group();
+            parentGroup.add(dollMesh);
+            scene.add(parentGroup);
+
+            const pMinX = platform.coords[0];
+            const pMinY = platform.coords[1];
+            const pMaxX = platform.coords[2];
+            const pMaxY = platform.coords[3];
+            const pCenterX = (pMinX + pMaxX) / 2;
+            const pCenterY = (pMinY + pMaxY) / 2;
+            const targetZ = platform.depth;
+
+            // Apply uniform scaling based on custom bounding box size to fit the platform bounds perfectly
+            const scaleX = platform.width3D / localSize.x;
+            const scaleY = platform.height3D / localSize.y;
+            const scaleZ = platform.width3D / localSize.z; // Ensure deep dolls fit within XZ platform bounds
+            const scale = Math.min(scaleX, scaleY, scaleZ);
+
+            parentGroup.scale.set(scale, scale, scale);
+
+            // Add a point light to highlight this doll from the front
+            // The distance is scaled by 1/scale to maintain a constant world-space range of 10.0 units.
+            const intensity = customDollIntensity[randKey] !== undefined ? customDollIntensity[randKey] : 6.5;
+            const dollLight = new THREE.PointLight(0xffffff, intensity, 10 / scale, 1.5);
+            dollLight.position.set(0, localSize.y * 0.25, localSize.z / 2 + 1.2 / scale);
+            parentGroup.add(dollLight);
+
+            const bottom3D = imageTo3D(pCenterX, pMaxY, targetZ);
+
+            // Create box shape matching exact scaled dimensions
+            const halfWidth = (localSize.x * scale) / 2;
+            const halfHeight = (localSize.y * scale) / 2;
+            const halfDepth = (localSize.z * scale) / 2;
+
+            const dollShape = new CANNON.Box(new CANNON.Vec3(halfWidth, halfHeight, halfDepth));
+
+            // Stand the doll exactly on top of the platform
+            const spawnY = bottom3D.y + halfHeight + 0.02;
+
+            const dollBody = new CANNON.Body({
+                mass: 0,
+                type: CANNON.Body.STATIC,
+                position: new CANNON.Vec3(bottom3D.x, spawnY, bottom3D.z)
+            });
+            dollBody.addShape(dollShape);
+            world.addBody(dollBody);
+
+            // Force fields shield mechanics
+            let shieldCount = 0;
+            let shieldMesh = null;
+            const randShield = Math.random();
+
+            if (currentRound > 10) {
+                // Withstand multiple hits (max of 3 including knockdown -> 2 shields, 1 knockdown)
+                if (randShield < 0.35) shieldCount = 2;
+                else if (randShield < 0.70) shieldCount = 1;
+            } else if (currentRound > 5) {
+                // Withstand 1 hit (1 shield, 1 knockdown)
+                if (randShield < 0.45) shieldCount = 1;
+            }
+
+            if (shieldCount > 0) {
+                const shieldGeo = new THREE.SphereGeometry(halfHeight * 1.25, 16, 16);
+                const shieldColor = shieldCount === 2 ? 0xff00ff : 0x0088ff;
+                const shieldMat = new THREE.MeshBasicMaterial({
+                    color: shieldColor,
+                    transparent: true,
+                    opacity: 0.35,
+                    blending: THREE.AdditiveBlending
+                });
+                shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+                parentGroup.add(shieldMesh);
+            }
+
+            // Power-up frequency reduction check (15% normal, 11.25% hard)
+            const bonusChance = gameMode === 'hard' ? 0.1125 : 0.15;
+            const isBonus = Math.random() < bonusChance;
+
+            let ringMesh = null;
+            if (isBonus && shieldCount === 0) { // Keep glow ring only if no active shield to avoid visual clutter
+                const light = new THREE.PointLight(0x00ffff, 1.8, 4);
+                light.position.set(0, halfHeight, 0);
+                parentGroup.add(light);
+
+                const ringGeo = new THREE.RingGeometry(halfWidth * 0.7, halfWidth * 0.9, 32);
+                const ringMat = new THREE.MeshBasicMaterial({
+                    color: 0x00ffff,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                ringMesh = new THREE.Mesh(ringGeo, ringMat);
+                ringMesh.rotation.x = Math.PI / 2;
+                ringMesh.position.y = halfHeight * 2.1;
+                parentGroup.add(ringMesh);
+            }
+
+            // After round 10, dolls have a 40% chance of hopping
+            let isHopping = false;
+            if (currentRound > 10) {
+                isHopping = Math.random() < 0.40;
+            }
+
+            const dollInfo = {
+                platform: platform,
+                group: parentGroup,
+                body: dollBody,
+                spawnTime: parseFloat((performance.now() / 1000).toFixed(3)),
+                lifetime: currentDollLifetime,
+                isBonus: isBonus,
+                isKaskit: false,
+                hit: false,
+                initialBox: { minX: pMinX, minY: pMinY, maxX: pMaxX, maxY: pMaxY },
+                halfHeight: halfHeight,
+                ringMesh: ringMesh,
+                shieldCount: shieldCount,
+                shieldMesh: shieldMesh,
+                modelName: randKey,
+                isHopping: isHopping,
+                isCurrentlyHopping: false,
+                hopProgress: 0,
+                nextHopTime: (performance.now() / 1000) + 0.8 + Math.random() * 1.5,
+                initialSpawnY: spawnY
+            };
+
+            // Enable dynamic physics response when a projectile hits the target
+            dollBody.addEventListener('collide', (event) => {
+                const isBall = balls.some(b => b.body === event.body);
+                if (isBall && dollBody.type === CANNON.Body.STATIC) {
+                    if (dollInfo.shieldCount && dollInfo.shieldCount > 0) {
+                        dollInfo.shieldCount--;
+                        playShieldDeflectSound();
+                        flashShield(dollInfo.shieldMesh);
+
+                        if (dollInfo.shieldCount === 0) {
+                            parentGroup.remove(dollInfo.shieldMesh);
+                            dollInfo.shieldMesh = null;
+                            showFloatingScore("SHIELD POP!", dollBody.position, '#00ffff');
+                        } else {
+                            dollInfo.shieldMesh.material.color.setHex(0x0088ff);
+                            showFloatingScore("SHIELD HIT!", dollBody.position, '#ff00ff');
+                        }
+
+                        // Remove the ball to prevent duplicate registrations
+                        const ballIndex = balls.findIndex(b => b.body === event.body);
+                        if (ballIndex !== -1) {
+                            world.removeBody(event.body);
+                            scene.remove(balls[ballIndex].mesh);
+                            balls.splice(ballIndex, 1);
+                        }
+                    } else {
+                        dollBody.type = CANNON.Body.DYNAMIC;
+                        dollBody.mass = 2;
+                        dollBody.updateMassProperties();
+
+                        const ballVel = event.body.velocity;
+                        const hitY = event.body.position.y - dollBody.position.y;
+                        const headshotThreshold = gameMode === 'hard' ? 0.6 : 0.4;
+                        let forceMult = 1.5;
+                        if (hitY > (dollInfo.halfHeight * headshotThreshold)) {
+                            forceMult = 1.5 * 1.8;
+                            dollInfo.isHeadshot = true;
+                        } else {
+                            dollInfo.isHeadshot = false;
+                        }
+
+                        const impulse = new CANNON.Vec3(ballVel.x * forceMult, ballVel.y * forceMult, ballVel.z * forceMult);
+                        dollBody.applyImpulse(impulse, dollBody.position);
+
+                        dollBody.wasHitByProjectile = true;
+                    }
+                }
+            });
+
+            dolls.push(dollInfo);
+            platform.activeDoll = dollInfo;
+        }
+
+        // Special Screen-hopping Kaskit Doll Spawner
+        function spawnKaskitDoll() {
+            // Spawn slightly off-screen on the left, at a random vertical height
+            const startPos = imageTo3D(-150, 600 + Math.random() * 150, -14);
+            const endPos = imageTo3D(2902, startPos.y, -14);
+
+            if (!preloadedModels['kaskitdiaperdoll.glb']) return;
+            const dollMesh = preloadedModels['kaskitdiaperdoll.glb'].clone();
+
+            // Center child model inside parent Group using our custom local bounding box
+            const localBox = getLocalBoundingBox(dollMesh);
+            const localSize = new THREE.Vector3();
+            const localCenter = new THREE.Vector3();
+            localBox.getSize(localSize);
+            localBox.getCenter(localCenter);
+
+            if (!isNaN(localCenter.x) && !isNaN(localCenter.y) && !isNaN(localCenter.z)) {
+                dollMesh.position.sub(localCenter);
+            }
+
+            // Turn the Kaskit doll another 90-degrees clockwise so she faces right during travel
+            dollMesh.rotation.y = 0.0;
+
+            const parentGroup = new THREE.Group();
+            parentGroup.add(dollMesh);
+            scene.add(parentGroup);
+
+            // Scale to look visually prominent (approx 1.7 units tall)
+            const targetHeight = 1.7;
+            const scale = targetHeight / localSize.y;
+            parentGroup.scale.set(scale, scale, scale);
+
+            // Add a point light to highlight Kaskit from the front (since she faces right/+X)
+            // The distance is scaled by 1/scale to maintain a constant world-space range of 10.0 units.
+            const intensity = customDollIntensity['kaskitdiaperdoll.glb'] !== undefined ? customDollIntensity['kaskitdiaperdoll.glb'] : 2.5;
+            const dollLight = new THREE.PointLight(0xffffff, intensity, 10 / scale, 1.5);
+            dollLight.position.set(localSize.x / 2 + 1.2 / scale, localSize.y * 0.25, 0);
+            parentGroup.add(dollLight);
+
+            const halfWidth = (localSize.x * scale) / 2;
+            const halfHeight = (localSize.y * scale) / 2;
+            const halfDepth = (localSize.z * scale) / 2;
+
+            const dollShape = new CANNON.Box(new CANNON.Vec3(halfWidth, halfHeight, halfDepth));
+
+            const spawnY = startPos.y + halfHeight;
+
+            const dollBody = new CANNON.Body({
+                mass: 0,
+                type: CANNON.Body.STATIC,
+                position: new CANNON.Vec3(startPos.x, spawnY, -14)
+            });
+            dollBody.addShape(dollShape);
+            world.addBody(dollBody);
+
+            // 3-hit shield bubble (Gold/Yellow color bubble)
+            const shieldGeo = new THREE.SphereGeometry(halfHeight * 1.35, 16, 16);
+            const shieldMat = new THREE.MeshBasicMaterial({
+                color: 0xffd700, // Gold/yellow for 3 shields
+                transparent: true,
+                opacity: 0.38,
+                blending: THREE.AdditiveBlending
+            });
+            const shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+            parentGroup.add(shieldMesh);
+
+            const dollInfo = {
+                platform: null, // No fixed platform
+                group: parentGroup,
+                body: dollBody,
+                spawnTime: parseFloat((performance.now() / 1000).toFixed(3)),
+                lifetime: 10.0,
+                isBonus: false,
+                isKaskit: true,
+                hit: false,
+                initialBox: null,
+                halfHeight: halfHeight,
+                shieldCount: 3,
+                shieldMesh: shieldMesh,
+                modelName: 'kaskitdiaperdoll.glb',
+                startX: startPos.x,
+                endX: endPos.x,
+                baseY: spawnY,
+                speedX: 2.8 // Reduced speed so she stays on screen longer (approx 5 seconds)
+            };
+
+            // Enable dynamic physics response when hit
+            dollBody.addEventListener('collide', (event) => {
+                const isBall = balls.some(b => b.body === event.body);
+                if (isBall && dollBody.type === CANNON.Body.STATIC) {
+                    if (dollInfo.shieldCount > 0) {
+                        dollInfo.shieldCount--;
+                        playShieldDeflectSound();
+                        flashShield(dollInfo.shieldMesh);
+
+                        if (dollInfo.shieldCount === 0) {
+                            parentGroup.remove(dollInfo.shieldMesh);
+                            dollInfo.shieldMesh = null;
+                            showFloatingScore("SHIELD POP!", dollBody.position, '#00ffff');
+                        } else {
+                            // yellow -> magenta -> blue shield progression
+                            const nextColor = dollInfo.shieldCount === 2 ? 0xff00ff : 0x0088ff;
+                            dollInfo.shieldMesh.material.color.setHex(nextColor);
+                            showFloatingScore("SHIELD HIT!", dollBody.position, '#ffd700');
+                        }
+
+                        // Remove the ball
+                        const ballIndex = balls.findIndex(b => b.body === event.body);
+                        if (ballIndex !== -1) {
+                            world.removeBody(event.body);
+                            scene.remove(balls[ballIndex].mesh);
+                            balls.splice(ballIndex, 1);
+                        }
+                    } else {
+                        dollBody.type = CANNON.Body.DYNAMIC;
+                        dollBody.mass = 2;
+                        dollBody.updateMassProperties();
+
+                        const ballVel = event.body.velocity;
+                        const hitY = event.body.position.y - dollBody.position.y;
+                        const headshotThreshold = gameMode === 'hard' ? 0.6 : 0.4;
+                        let forceMult = 1.5;
+                        if (hitY > (dollInfo.halfHeight * headshotThreshold)) {
+                            forceMult = 1.5 * 1.8;
+                            dollInfo.isHeadshot = true;
+                        } else {
+                            dollInfo.isHeadshot = false;
+                        }
+
+                        const impulse = new CANNON.Vec3(ballVel.x * forceMult, ballVel.y * forceMult, ballVel.z * forceMult);
+                        dollBody.applyImpulse(impulse, dollBody.position);
+
+                        dollBody.wasHitByProjectile = true;
+                    }
+                }
+            });
+
+            dolls.push(dollInfo);
+        }
+
+        // --- 8. HUD & UI Interaction ---
+        function updateHUD() {
+            document.getElementById('hud-round').innerText = currentRound;
+            document.getElementById('hud-score').innerText = currentScore;
+            document.getElementById('hud-spawns').innerText = 10 - totalSpawnsStarted;
+            document.getElementById('hud-hits').innerText = `${roundHits} / ${hitsNeeded}`;
+
+            if (gameMode === 'hard') {
+                if (isReloading) {
+                    document.getElementById('hud-ammo').innerText = "RELOAD...";
+                    document.getElementById('hud-ammo').style.color = '#ffaa00';
+                } else {
+                    document.getElementById('hud-ammo').innerText = `${ammo} / ${maxAmmo}`;
+                    document.getElementById('hud-ammo').style.color = ammo === 0 ? '#ff4444' : 'var(--gold-light)';
+                }
+            } else {
+                document.getElementById('hud-ammo').innerText = "∞";
+                document.getElementById('hud-ammo').style.color = 'var(--gold-light)';
+            }
+
+            if (currentScore > highScore) {
+                highScore = currentScore;
+                localStorage.setItem('roundup_highScore', highScore);
+                if (window.CasinoSaveManager) {
+                    CasinoSaveManager.updateHighScore('targetshooter', highScore);
+                }
+                document.getElementById('hud-highscore').innerText = highScore;
+            }
+        }
+
+        function activateSuperProjectiles() {
+            superProjectilesActive = true;
+            superProjectilesTime = gameMode === 'hard' ? 4.9 : 7.0;
+            document.getElementById('super-balls-panel').style.display = 'flex';
+            playBonusSound();
+        }
+
+        function activateSpeedPowerUp() {
+            speedPowerUpActive = true;
+            speedPowerUpTime = gameMode === 'hard' ? 4.9 : 7.0;
+            document.getElementById('speed-powerup-panel').style.display = 'flex';
+            playBonusSound();
+        }
+
+        function reloadMagazine() {
+            if (gameMode !== 'hard' || isReloading || ammo === maxAmmo) return;
+            isReloading = true;
+            reloadTimer = 1.2;
+            playReloadSound();
+            updateHUD();
+        }
+
+        function showFloatingScore(text, position3D, color = '#ffd700') {
+            const tempPos = new THREE.Vector3(position3D.x, position3D.y, position3D.z);
+            tempPos.project(camera);
+
+            const rect = renderer.domElement.getBoundingClientRect();
+            const x = (tempPos.x * 0.5 + 0.5) * rect.width + rect.left;
+            const y = (1 - (tempPos.y * 0.5 + 0.5)) * rect.height + rect.top;
+
+            const el = document.createElement('div');
+            el.style.position = 'absolute';
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+            el.style.transform = 'translate(-50%, -50%)';
+            el.style.color = color;
+            el.style.fontSize = '2.2rem';
+            el.style.fontWeight = 'bold';
+            el.style.textShadow = '2px 2px 4px #000';
+            el.style.pointerEvents = 'none';
+            el.style.fontFamily = "'MedievalSharp', serif";
+            el.style.zIndex = '50';
+            el.style.transition = 'all 0.8s ease-out';
+            el.innerText = typeof text === 'number' ? `+${text}` : text;
+
+            document.body.appendChild(el);
+
+            setTimeout(() => {
+                el.style.top = `${y - 70}px`;
+                el.style.opacity = '0';
+            }, 50);
+
+            setTimeout(() => {
+                el.remove();
+            }, 850);
+        }
+
+        function triggerHit(d) {
+            if (d.platform) {
+                d.platform.activeDoll = null;
+            }
+
+            let scoreAwarded = d.isKaskit ? 1000 : d.platform.score;
+            if (d.isHeadshot) {
+                const mult = gameMode === 'hard' ? 2.0 : 1.8;
+                scoreAwarded = Math.round(scoreAwarded * mult);
+            }
+
+            currentScore += scoreAwarded;
+
+            // Only platform dolls advance the hit/spawn progression of the round
+            if (!d.isKaskit) {
+                roundHits++;
+                totalSpawnsProcessed++;
+            }
+
+            if (d.isHeadshot) {
+                showFloatingScore("HEADSHOT!", d.body.position, '#ffd700');
+            }
+
+            if (d.isKaskit) {
+                showFloatingScore("BONUS 1000!", d.body.position, '#ffaa00');
+            } else {
+                showFloatingScore(scoreAwarded, d.body.position);
+            }
+
+            if (d.isBonus) {
+                activateSuperProjectiles();
+            }
+
+            // Power Up: Stabby and Sakura grant speed burst
+            if (d.modelName === 'stabbydiaperdoll.glb' || d.modelName === 'sakuradiaperdoll.glb') {
+                const speedChance = gameMode === 'hard' ? 0.5625 : 0.75;
+                if (Math.random() < speedChance) {
+                    activateSpeedPowerUp();
+                    showFloatingScore("SPEED BURST!", d.body.position, '#ffaa00');
+                }
+            }
+
+            updateHUD();
+            checkRoundProgress();
+        }
+
+        function triggerMiss(d) {
+            d.platform.activeDoll = null;
+            totalSpawnsProcessed++;
+
+            showFloatingScore("MISS", d.body.position, '#ff4444');
+
+            updateHUD();
+            checkRoundProgress();
+        }
+
+        function checkRoundProgress() {
+            if (totalSpawnsProcessed >= 10) {
+                isPaused = true;
+                if (roundHits >= hitsNeeded) {
+                    playWinSound();
+                    setTimeout(showRoundClearModal, 500);
+                } else {
+                    retriesLeft--; // Decrement remaining retries
+                    playLoseSound();
+                    setTimeout(showGameOverModal, 500);
+                }
+            }
+        }
+
+        function showRoundClearModal() {
+            document.getElementById('clear-round').innerText = currentRound;
+            document.getElementById('clear-hits').innerText = roundHits;
+            document.getElementById('clear-score').innerText = currentScore;
+
+            const modal = document.getElementById('round-clear-modal');
+            modal.style.display = 'flex';
+            positionModal(modal);
+        }
+
+        function showGameOverModal() {
+            document.getElementById('over-round').innerText = currentRound;
+            document.getElementById('over-hits').innerText = roundHits;
+            document.getElementById('over-target').innerText = hitsNeeded;
+            document.getElementById('over-score').innerText = currentScore;
+
+            const retryButton = document.getElementById('retry-btn');
+            const retriesContainer = document.getElementById('over-retries-container');
+            const retriesSpan = document.getElementById('over-retries');
+            const titleText = document.getElementById('game-over-title');
+
+            if (retriesLeft > 0) {
+                titleText.innerText = "Round Failed!";
+                titleText.style.color = "#ffaa00";
+                retriesContainer.style.display = "block";
+                retriesSpan.innerText = retriesLeft;
+                retryButton.style.display = "inline-block";
+                retryButton.innerText = `Retry Round (${retriesLeft} left)`;
+            } else {
+                titleText.innerText = "GAME OVER!";
+                titleText.style.color = "#ff4444";
+                retriesContainer.style.display = "block";
+                retriesSpan.innerText = "0";
+                retryButton.style.display = "none";
+            }
+
+            const modal = document.getElementById('game-over-modal');
+            modal.style.display = 'flex';
+            positionModal(modal);
+        }
+
+        function positionModal(modal) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            modal.style.left = `${rect.left + rect.width / 2}px`;
+            modal.style.top = `${rect.top + rect.height / 2}px`;
+            modal.style.transform = 'translate(-50%, -50%)';
+        }
+
+        // --- 8.5 Pause Screen & 3D Doll Preview Gallery ---
+        function togglePause() {
+            if (!gameStarted) return;
+
+            if (document.getElementById('round-clear-modal').style.display === 'flex' ||
+                document.getElementById('game-over-modal').style.display === 'flex') {
+                return;
+            }
+
+            isPaused = !isPaused;
+
+            if (isPaused) {
+                // Reset detail view state variables
+                isViewingDetail = true;
+                selectedDetailGroup = null;
+                isDraggingDetail = false;
+                document.getElementById('pause-title').style.display = 'block';
+                document.getElementById('pause-loaded-info').style.display = 'block';
+                document.getElementById('pause-instructions').style.display = 'block';
+                document.getElementById('resume-btn').style.display = 'inline-block';
+                document.getElementById('exit-btn').style.display = 'inline-block';
+
+                buildPauseScene();
+                document.getElementById('pause-overlay').style.display = 'flex';
+            } else {
+                document.getElementById('pause-overlay').style.display = 'none';
+                clock.getDelta(); // Clear delta accumulation
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (!gameStarted) return;
+            if (e.key === 'Escape' || e.key === 'p' || e.key === 'P' || e.key === ' ' || e.code === 'Space') {
+                if (e.key === ' ' || e.code === 'Space') {
+                    e.preventDefault(); // Prevent page scrolling
+                }
+                togglePause();
+            }
+            if (isPaused) {
+                if (e.key === 'ArrowLeft') {
+                    prevGalleryDoll();
+                } else if (e.key === 'ArrowRight') {
+                    nextGalleryDoll();
+                }
+            }
+            if (e.key === 'r' || e.key === 'R') {
+                reloadMagazine();
+            }
+        });
+
+        function formatDollName(filename) {
+            let name = filename.replace('.glb', '');
+            name = name.replace('diaperdoll', ' ');
+            name = name.replace('diaper', ' ');
+            name = name.replace('doll', ' ');
+            name = name.trim();
+            name = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            if (name === "Kaskit") {
+                return "Kaskit Diaper Doll";
+            }
+            return name + " Doll";
+        }
+
+        function prevGalleryDoll() {
+            const keys = Object.keys(preloadedModels);
+            if (keys.length === 0) return;
+            currentGalleryIndex = (currentGalleryIndex - 1 + keys.length) % keys.length;
+            buildPauseScene();
+        }
+
+        function nextGalleryDoll() {
+            const keys = Object.keys(preloadedModels);
+            if (keys.length === 0) return;
+            currentGalleryIndex = (currentGalleryIndex + 1) % keys.length;
+            buildPauseScene();
+        }
+
+        function buildPauseScene() {
+            pauseScene = new THREE.Scene();
+            pauseScene.background = new THREE.Color(0x1a0f0a); // Solid dark wood background
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.95);
+            pauseScene.add(ambient);
+            const directional = new THREE.DirectionalLight(0xffffff, 0.75);
+            directional.position.set(5, 8, 10);
+            pauseScene.add(directional);
+
+            pauseDollsGroup = new THREE.Group();
+            pauseScene.add(pauseDollsGroup);
+
+            const keys = Object.keys(preloadedModels);
+            if (keys.length === 0) return;
+
+            // Wrap index just in case
+            if (currentGalleryIndex < 0) currentGalleryIndex = keys.length - 1;
+            if (currentGalleryIndex >= keys.length) currentGalleryIndex = 0;
+
+            const key = keys[currentGalleryIndex];
+            const dollMesh = preloadedModels[key].clone();
+
+            // Set initial rotation (using custom configuration if exists, otherwise 0.0)
+            const initialRot = customDollRotations[key] !== undefined ? customDollRotations[key] : 0.0;
+            dollMesh.rotation.y = initialRot;
+
+            const localBox = getLocalBoundingBox(dollMesh);
+            const localSize = new THREE.Vector3();
+            const localCenter = new THREE.Vector3();
+            localBox.getSize(localSize);
+            localBox.getCenter(localCenter);
+
+            if (!isNaN(localCenter.x) && !isNaN(localCenter.y) && !isNaN(localCenter.z)) {
+                dollMesh.position.sub(localCenter);
+            }
+
+            // Save localCenter to userData for quick access in live slider updates
+            dollMesh.userData.localCenter = localCenter.clone();
+
+            const itemGroup = new THREE.Group();
+            itemGroup.add(dollMesh);
+            itemGroup.userData = { filename: key };
+
+            // Scale uniformly to display size (1.8 units tall)
+            const scale = 1.8 / localSize.y;
+            itemGroup.scale.set(scale, scale, scale);
+
+            // Add a point light to highlight this doll in the gallery
+            const initialIntensity = customDollIntensity[key] !== undefined ? customDollIntensity[key] : 6.5;
+            const dollLight = new THREE.PointLight(0xffffff, initialIntensity, 8 / scale, 1.5);
+            if (key === 'kaskitdiaperdoll.glb') {
+                dollLight.position.set(localSize.x / 2 + 1.2 / scale, localSize.y * 0.25, 0);
+            } else {
+                dollLight.position.set(0, localSize.y * 0.25, localSize.z / 2 + 1.2 / scale);
+            }
+            itemGroup.add(dollLight);
+
+            // Position centered in pauseScene
+            itemGroup.position.set(0, 0, 0);
+            pauseDollsGroup.add(itemGroup);
+
+            // Set up camera and detail view state so mouse dragging works instantly
+            pauseCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            const aspect = renderer.domElement.width / renderer.domElement.height;
+            pauseCamera.aspect = aspect;
+            pauseCamera.updateProjectionMatrix();
+
+            // Fixed camera position for a nice close-up detail view
+            pauseCamera.position.set(0, 0, 4.2);
+            pauseCamera.lookAt(0, 0, 0);
+
+            selectedDetailGroup = itemGroup;
+            isViewingDetail = true;
+            isDraggingDetail = false;
+
+            // Update loaded count message & doll name
+            document.getElementById('gallery-doll-name').innerText = formatDollName(key);
+            document.getElementById('pause-loaded-count').innerText = `Doll ${currentGalleryIndex + 1} of ${keys.length} (Loaded)`;
+
+            // Update UI sliders and copyable config block
+            const initialRotDeg = Math.round((initialRot * 180) / Math.PI);
+            document.getElementById('gallery-rot-slider').value = initialRotDeg;
+            document.getElementById('gallery-rot-val').innerText = `${initialRotDeg}°`;
+            document.getElementById('gallery-light-slider').value = initialIntensity;
+            document.getElementById('gallery-light-val').innerText = initialIntensity.toFixed(1);
+            updateConfigTextarea();
+
+            // Update Toggle Spin Button state
+            const spinBtn = document.getElementById('toggle-spin-btn');
+            if (spinBtn) {
+                if (autoRotateGallery) {
+                    spinBtn.innerText = "⏸ Pause Spin / Reset";
+                    spinBtn.style.backgroundColor = "var(--wood-dark)";
+                    spinBtn.style.color = "var(--gold-light)";
+                } else {
+                    spinBtn.innerText = "▶ Resume Spin";
+                    spinBtn.style.backgroundColor = "var(--gold)";
+                    spinBtn.style.color = "var(--wood-dark)";
+                }
+            }
+        }
+
+        function updateGalleryLight(val) {
+            const keys = Object.keys(preloadedModels);
+            if (keys.length === 0) return;
+            const key = keys[currentGalleryIndex];
+            customDollIntensity[key] = parseFloat(val);
+            document.getElementById('gallery-light-val').innerText = customDollIntensity[key].toFixed(1);
+
+            // Update light in active preview group
+            if (selectedDetailGroup) {
+                selectedDetailGroup.traverse(child => {
+                    if (child.isPointLight) {
+                        child.intensity = customDollIntensity[key];
+                    }
+                });
+            }
+            updateConfigTextarea();
+        }
+
+        function updateGalleryRotation(val) {
+            const deg = parseInt(val);
+            document.getElementById('gallery-rot-val').innerText = `${deg}°`;
+            const rad = (deg * Math.PI) / 180;
+
+            const keys = Object.keys(preloadedModels);
+            if (keys.length === 0) return;
+            const key = keys[currentGalleryIndex];
+            customDollRotations[key] = parseFloat(rad.toFixed(4));
+
+            // Find dollMesh inside selectedDetailGroup and rotate it
+            if (selectedDetailGroup) {
+                const dollMesh = selectedDetailGroup.children[0];
+                if (dollMesh) {
+                    dollMesh.rotation.y = rad;
+                    const lc = dollMesh.userData.localCenter;
+                    if (lc) {
+                        dollMesh.position.copy(lc).multiplyScalar(-1);
+                    }
+                }
+            }
+            updateConfigTextarea();
+        }
+
+        function updateConfigTextarea() {
+            const config = {
+                intensities: customDollIntensity,
+                rotations: customDollRotations
+            };
+            document.getElementById('doll-config-copy').value = JSON.stringify(config);
+        }
+
+        function testCurrentSettings() {
+            // 1. Resume the game
+            togglePause();
+
+            // 2. Clear all active gameplay dolls so they don't block platforms
+            dolls.forEach(d => {
+                world.removeBody(d.body);
+                scene.remove(d.group);
+            });
+            dolls.length = 0;
+            targets.forEach(t => t.activeDoll = null);
+
+            // 3. Immediately spawn the doll we were just viewing in the gallery
+            const keys = Object.keys(preloadedModels);
+            if (keys.length === 0) return;
+            const key = keys[currentGalleryIndex];
+
+            if (key === 'kaskitdiaperdoll.glb') {
+                spawnKaskitDoll();
+            } else {
+                spawnDoll(key);
+            }
+        }
+
+        function toggleGallerySpin() {
+            autoRotateGallery = !autoRotateGallery;
+            const btn = document.getElementById('toggle-spin-btn');
+            if (btn) {
+                if (autoRotateGallery) {
+                    btn.innerText = "⏸ Pause Spin / Reset";
+                    btn.style.backgroundColor = "var(--wood-dark)";
+                    btn.style.color = "var(--gold-light)";
+                } else {
+                    btn.innerText = "▶ Resume Spin";
+                    btn.style.backgroundColor = "var(--gold)";
+                    btn.style.color = "var(--wood-dark)";
+                    // Reset parent group rotation so the slider rotation is absolute relative to camera
+                    if (selectedDetailGroup) {
+                        selectedDetailGroup.rotation.y = 0.0;
+                    }
+                }
+            }
+        }
+
+        function nextRound() {
+            currentRound++;
+            initRound();
+        }
+
+        function retryRound() {
+            initRound();
+        }
+
+        function quitGame() {
+            gameStarted = false;
+            isPaused = false;
+
+            document.getElementById('game-window-container').style.display = 'none';
+            document.getElementById('page-title').style.display = 'block';
+            document.getElementById('menu-container').style.display = 'flex';
+
+            // Reset scores
+            currentRound = 1;
+            currentScore = 0;
+            updateHUD();
+        }
+
+        // --- 9. Raycast Firing Input & Pause Interaction ---
+        window.addEventListener('mousedown', (event) => {
+            if (!gameStarted || isPreparingRound) return;
+
+            // Handle Pause Screen Interactivity
+            if (isPaused) {
+                // Do not drag if clicking HUD panel controls or button elements
+                if (event.target.closest('.pause-hud') || event.target.closest('.pause-footer') || event.target.tagName === 'BUTTON') {
+                    return;
+                }
+
+                if (selectedDetailGroup) {
+                    isDraggingDetail = true;
+                    previousMousePosition = {
+                        x: event.clientX,
+                        y: event.clientY
+                    };
+                }
+                return;
+            }
+
+            // Stop shots if clicking HUD elements or modals
+            if (event.target.closest('.hud-panel') || event.target.closest('.modal') || event.target.tagName === 'BUTTON') {
+                return;
+            }
+
+            const now = performance.now() / 1000;
+
+            if (gameMode === 'hard') {
+                if (isReloading) return;
+                if (ammo <= 0) {
+                    playEmptyClickSound();
+                    return;
+                }
+
+                // Shot delay
+                if (now - lastFireTime < 0.20) {
+                    return;
+                }
+
+                ammo--;
+                lastFireTime = now;
+                updateHUD();
+            }
+
+            playShootSound();
+
+            const rect = renderer.domElement.getBoundingClientRect();
+            const mouse = new THREE.Vector2(
+                ((event.clientX - rect.left) / rect.width) * 2 - 1,
+                -((event.clientY - rect.top) / rect.height) * 2 + 1
+            );
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            const dir = raycaster.ray.direction.clone().normalize();
+
+            const isSuper = superProjectilesActive;
+            const radius = isSuper ? 0.52 : 0.20;
+            const mass = isSuper ? 30 : 4;
+
+            // Base speed increased 15% (from 48 to 55)
+            const baseSpeed = 55;
+            const speed = speedPowerUpActive ? baseSpeed * 1.30 : baseSpeed;
+
+            // Spawn ball slightly in front of camera
+            const spawnPos = camera.position.clone().add(dir.clone().multiplyScalar(0.6));
+
+            const ballBody = new CANNON.Body({
+                mass: mass,
+                position: new CANNON.Vec3(spawnPos.x, spawnPos.y, spawnPos.z)
+            });
+            ballBody.addShape(new CANNON.Sphere(radius));
+            ballBody.velocity.copy(dir.multiplyScalar(speed));
+            world.addBody(ballBody);
+
+            const ballGeo = new THREE.SphereGeometry(radius, 16, 16);
+            const ballMat = new THREE.MeshStandardMaterial({
+                color: isSuper ? 0xffd700 : 0x444444,
+                metalness: 0.9,
+                roughness: 0.15,
+                emissive: isSuper ? 0xb58900 : 0x000000,
+                emissiveIntensity: isSuper ? 0.6 : 0
+            });
+            const ballMesh = new THREE.Mesh(ballGeo, ballMat);
+            scene.add(ballMesh);
+
+            balls.push({
+                body: ballBody,
+                mesh: ballMesh,
+                spawnTime: performance.now() / 1000
+            });
+        });
+
+        window.addEventListener('mousemove', (event) => {
+            if (isPaused && isViewingDetail && selectedDetailGroup && isDraggingDetail) {
+                const deltaMove = {
+                    x: event.clientX - previousMousePosition.x,
+                    y: event.clientY - previousMousePosition.y
+                };
+
+                // Allow manual rotation with mouse dragging
+                selectedDetailGroup.rotation.y += deltaMove.x * 0.01;
+
+                previousMousePosition = {
+                    x: event.clientX,
+                    y: event.clientY
+                };
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDraggingDetail = false;
+        });
+
+        // --- 10. Core Loop ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            if (!gameStarted) return;
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+            const now = performance.now() / 1000;
+
+            if (!isPaused) {
+                // Update round preparation timer
+                if (isPreparingRound) {
+                    prepareTimer -= delta;
+                    if (prepareTimer <= 0) {
+                        isPreparingRound = false;
+                        document.getElementById('round-start-overlay').style.display = 'none';
+                    }
+                }
+
+                // Update ammo reload timer
+                if (isReloading) {
+                    reloadTimer -= delta;
+                    if (reloadTimer <= 0) {
+                        isReloading = false;
+                        ammo = maxAmmo;
+                        updateHUD();
+                        playBonusSound();
+                    }
+                }
+
+                // Step physics
+                world.step(1 / 60);
+
+                // Update super balls timer
+                if (superProjectilesActive) {
+                    superProjectilesTime -= delta;
+                    if (superProjectilesTime <= 0) {
+                        superProjectilesActive = false;
+                        document.getElementById('super-balls-panel').style.display = 'none';
+                    } else {
+                        document.getElementById('super-timer').innerText = superProjectilesTime.toFixed(1);
+                    }
+                }
+
+                // Update speed powerup timer
+                if (speedPowerUpActive) {
+                    speedPowerUpTime -= delta;
+                    if (speedPowerUpTime <= 0) {
+                        speedPowerUpActive = false;
+                        document.getElementById('speed-powerup-panel').style.display = 'none';
+                    } else {
+                        document.getElementById('speed-timer').innerText = speedPowerUpTime.toFixed(1);
+                    }
+                }
+
+                // Spawning controller (only spawn if not in prep phase)
+                if (!isPreparingRound) {
+                    updateSpawning(now);
+
+                    // Kaskit doll spawning schedule
+                    if (now > nextKaskitSpawnTime) {
+                        spawnKaskitDoll();
+                        // Schedule next spawn (every 18 to 32 seconds)
+                        nextKaskitSpawnTime = now + 18.0 + Math.random() * 14.0;
+                    }
+                }
+
+                // Update dolls
+                for (let i = dolls.length - 1; i >= 0; i--) {
+                    const d = dolls[i];
+
+                    if (d.hit) {
+                        // Shrink and fade-out animation
+                        d.group.scale.multiplyScalar(0.9);
+                        if (d.group.scale.x < 0.05) {
+                            scene.remove(d.group);
+                            dolls.splice(i, 1);
+                        }
+                        continue;
+                    }
+
+                    // Rotate the halo ring if it has one
+                    if (d.ringMesh) {
+                        d.ringMesh.rotation.z += 0.03;
+                    }
+
+                    // Special Screen-hopping Kaskit doll movement controller
+                    if (d.isKaskit && d.body.type === CANNON.Body.STATIC) {
+                        const elapsed = now - d.spawnTime;
+                        const newX = d.startX + elapsed * d.speedX;
+
+                        // Slower vertical hop (bounces 1.6 times per second, up to 1.4 units high)
+                        const hopHeight = Math.abs(Math.sin(elapsed * Math.PI * 1.6)) * 1.4;
+                        const newY = d.baseY + hopHeight;
+
+                        d.body.position.set(newX, newY, -14);
+
+                        // If she exits the right edge of screen bounds, de-spawn silently
+                        if (newX > d.endX) {
+                            world.removeBody(d.body);
+                            scene.remove(d.group);
+                            dolls.splice(i, 1);
+                            continue;
+                        }
+                    }
+
+                    // Periodic vertical hopping animation for platform dolls (after round 10)
+                    if (!d.isKaskit && d.isHopping && d.body.type === CANNON.Body.STATIC) {
+                        if (d.isCurrentlyHopping) {
+                            d.hopProgress += delta * 1.8; // Takes about 0.55s total
+                            if (d.hopProgress >= 1.0) {
+                                d.hopProgress = 0;
+                                d.isCurrentlyHopping = false;
+                                d.nextHopTime = now + 1.0 + Math.random() * 1.5;
+                                d.body.position.y = d.initialSpawnY;
+                            } else {
+                                const hopHeight = Math.sin(d.hopProgress * Math.PI) * 0.8; // Hop up by 0.8 units max
+                                d.body.position.y = d.initialSpawnY + hopHeight;
+                            }
+                        } else if (now > d.nextHopTime) {
+                            d.isCurrentlyHopping = true;
+                            d.hopProgress = 0;
+                        }
+                    }
+
+                    // Failsafe proximity hit registration in case collision engine misses due to tunneling
+                    if (d.body.type === CANNON.Body.STATIC) {
+                        const halfWidth = (d.platform ? d.platform.width3D : 0.8) / 2; // Default collision radius if no platform
+
+                        for (let j = 0; j < balls.length; j++) {
+                            const b = balls[j];
+                            const ballRadius = b.mesh.geometry.parameters.radius || 0.20;
+
+                            const dx = d.body.position.x - b.body.position.x;
+                            const dy = d.body.position.y - b.body.position.y;
+                            const dz = d.body.position.z - b.body.position.z;
+                            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                            if (dist < (halfWidth + ballRadius + 0.15)) {
+                                if (d.shieldCount && d.shieldCount > 0) {
+                                    d.shieldCount--;
+                                    playShieldDeflectSound();
+                                    flashShield(d.shieldMesh);
+
+                                    if (d.shieldCount === 0) {
+                                        d.group.remove(d.shieldMesh);
+                                        d.shieldMesh = null;
+                                        showFloatingScore("SHIELD POP!", d.body.position, '#00ffff');
+                                    } else {
+                                        const nextColor = d.shieldCount === 2 ? 0xff00ff : 0x0088ff;
+                                        d.shieldMesh.material.color.setHex(nextColor);
+                                        showFloatingScore("SHIELD HIT!", d.body.position, '#ffd700');
+                                    }
+
+                                    // Remove the ball
+                                    world.removeBody(b.body);
+                                    scene.remove(b.mesh);
+                                    balls.splice(j, 1);
+                                } else {
+                                    d.body.type = CANNON.Body.DYNAMIC;
+                                    d.body.mass = 2;
+                                    d.body.updateMassProperties();
+
+                                    const ballVel = b.body.velocity;
+                                    const hitY = b.body.position.y - d.body.position.y;
+                                    const headshotThreshold = gameMode === 'hard' ? 0.6 : 0.4;
+                                    let forceMult = 1.5;
+                                    if (hitY > (d.halfHeight * headshotThreshold)) {
+                                        forceMult = 1.5 * 1.8;
+                                        d.isHeadshot = true;
+                                    } else {
+                                        d.isHeadshot = false;
+                                    }
+                                    const impulse = new CANNON.Vec3(ballVel.x * forceMult, ballVel.y * forceMult, ballVel.z * forceMult);
+                                    d.body.applyImpulse(impulse, d.body.position);
+
+                                    d.body.wasHitByProjectile = true;
+                                }
+                                break;
+                            }
+                        }
+                    }
+
+                    // Copy physics to visual group position
+                    d.group.position.copy(d.body.position);
+                    d.group.quaternion.copy(d.body.quaternion);
+
+                    // Check bounds overlap with platform ONLY if it is dynamic (i.e. has been hit by ball)
+                    if (d.body.type === CANNON.Body.DYNAMIC) {
+                        // Kaskit doll falls and hits the floor or flies off-screen
+                        if (d.isKaskit) {
+                            if (d.body.position.y < -10 || Math.abs(d.body.position.x) > 12) {
+                                d.hit = true;
+                                playHitSound();
+                                triggerHit(d);
+                                world.removeBody(d.body);
+                                continue;
+                            }
+                        } else {
+                            const currentBox = getDollScreenBoundingBox(d.group);
+                            const overlap = getOverlapPercentage(currentBox, d.initialBox);
+
+                            if (overlap < 0.5) {
+                                d.hit = true;
+                                playHitSound();
+                                triggerHit(d);
+                                world.removeBody(d.body);
+                                continue;
+                            }
+                        }
+                    }
+
+                    // Timeout check - only triggers if it was NOT hit by a ball
+                    if (!d.body.wasHitByProjectile && now - d.spawnTime > d.lifetime) {
+                        if (d.isKaskit) {
+                            // Kaskit doll silently de-spawns
+                            world.removeBody(d.body);
+                            scene.remove(d.group);
+                            dolls.splice(i, 1);
+                        } else {
+                            triggerMiss(d);
+                            world.removeBody(d.body);
+                            scene.remove(d.group);
+                            dolls.splice(i, 1);
+                        }
+                    }
+                }
+
+                // Update fired balls
+                for (let i = balls.length - 1; i >= 0; i--) {
+                    const b = balls[i];
+                    b.mesh.position.copy(b.body.position);
+                    b.mesh.quaternion.copy(b.body.quaternion);
+
+                    // Garbage collection of old/fallen balls
+                    if (now - b.spawnTime > 4.0 || b.body.position.y < -12) {
+                        world.removeBody(b.body);
+                        scene.remove(b.mesh);
+                        balls.splice(i, 1);
+                    }
+                }
+
+                renderer.render(scene, camera);
+            } else if (isPaused && pauseScene) {
+                // Rotate dolls in grid preview or spin selected detailed doll
+                if (pauseDollsGroup) {
+                    if (isViewingDetail && selectedDetailGroup) {
+                        if (!isDraggingDetail && autoRotateGallery) {
+                            selectedDetailGroup.rotation.y += 0.006;
+                        }
+                    } else {
+                        pauseDollsGroup.children.forEach(item => {
+                            item.rotation.y += 0.015;
+                        });
+                    }
+                }
+                renderer.render(pauseScene, pauseCamera);
+            }
+        }
+
+        function updateSpawning(now) {
+            if (totalSpawnsStarted >= 10) return;
+
+            const activeCount = dolls.filter(d => !d.hit && !d.isKaskit).length;
+            if (activeCount < maxActiveDolls && now - lastSpawnTime > spawnInterval) {
+                spawnDoll();
+                totalSpawnsStarted++;
+                lastSpawnTime = now;
+                updateHUD();
+            }
+        }
+
+        // Save System Integration
+        window.openAdjustmentModal = function() {
+            document.getElementById('wallet-adjust-modal').style.display = 'flex';
+        };
+        window.closeAdjustmentModal = function() {
+            document.getElementById('wallet-adjust-modal').style.display = 'none';
+            document.getElementById('adjust-note').value = '';
+        };
+        window.submitAdjustment = function() {
+            const action = document.getElementById('adjust-action').value;
+            const amount = parseFloat(document.getElementById('adjust-amount').value);
+            const note = document.getElementById('adjust-note').value;
+            if (isNaN(amount) || amount <= 0) {
+                alert("Please enter a valid positive amount.");
+                return;
+            }
+            if (action === 'add') {
+                CasinoSaveManager.addFunds(amount, note || "Deposit buy-in");
+            } else {
+                const currentBalance = CasinoSaveManager.getBankroll();
+                if (amount > currentBalance) {
+                    alert("Cannot cash out more than your current wallet balance!");
+                    return;
+                }
+                CasinoSaveManager.cashOut(amount, note || "Cash-out withdrawal");
+            }
+            window.closeAdjustmentModal();
+        };
+        window.handleSaveImport = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                CasinoSaveManager.importSave(e.target.result, (err, newBalance) => {
+                    if (err) {
+                        alert("Error importing save: " + err.message);
+                    } else {
+                        alert("Session successfully imported! Balance: $" + newBalance);
+                    }
+                });
+            };
+            reader.readAsText(file);
+        };
+
+        function updateHighScoreDisplay(newHighScore) {
+            highScore = newHighScore;
+            localStorage.setItem('roundup_highScore', highScore);
+            const hudHigh = document.getElementById('hud-highscore');
+            if (hudHigh) hudHigh.innerText = highScore;
+            const menuHigh = document.getElementById('session-highscore-display');
+            if (menuHigh) menuHigh.innerText = highScore;
+        }
+
+        // Initialize bankroll displays and subscribe to updates
+        window.addEventListener('load', () => {
+            const initialBalance = CasinoSaveManager.getBankroll();
+            const display = document.getElementById('session-bankroll-display');
+            if (display) display.innerText = '$' + initialBalance.toFixed(2);
+
+            CasinoSaveManager.onUpdate((newBalance, newHighScore) => {
+                const display = document.getElementById('session-bankroll-display');
+                if (display) display.innerText = '$' + newBalance.toFixed(2);
+                updateHighScoreDisplay(newHighScore);
+            });
+        });
+    </script>
+</body>
+
+</html>
